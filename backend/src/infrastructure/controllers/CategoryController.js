@@ -3,7 +3,13 @@ const AppError = require('../../utils/appError');
 
 exports.getAllCategories = async (req, res, next) => {
     try {
+        const whereClause = {};
+        if (req.body.company_id) {
+            whereClause.company_id = req.body.company_id;
+        }
+
         const categories = await Category.findAll({
+            where: whereClause,
             order: [
                 ['order_index', 'ASC'],
                 ['name', 'ASC'],

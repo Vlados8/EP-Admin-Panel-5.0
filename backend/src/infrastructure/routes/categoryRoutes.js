@@ -1,36 +1,34 @@
 const express = require('express');
 const categoryController = require('../controllers/CategoryController');
 const auth = require('../middlewares/auth');
+const flexibleAuth = require('../middlewares/flexibleAuth');
 
 const router = express.Router();
-
-// Protect all category-related routes
-router.use(auth.protect);
 
 // Categories
 router
     .route('/')
-    .get(categoryController.getAllCategories)
-    .post(categoryController.createCategory);
+    .get(flexibleAuth, categoryController.getAllCategories)
+    .post(auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.createCategory);
 
 router
     .route('/:id')
-    .patch(categoryController.updateCategory)
-    .delete(categoryController.deleteCategory);
+    .patch(auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.updateCategory)
+    .delete(auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.deleteCategory);
 
 // Subcategories
-router.post('/subcategories', categoryController.createSubcategory);
-router.patch('/subcategories/:id', categoryController.updateSubcategory);
-router.delete('/subcategories/:id', categoryController.deleteSubcategory);
+router.post('/subcategories', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.createSubcategory);
+router.patch('/subcategories/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.updateSubcategory);
+router.delete('/subcategories/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.deleteSubcategory);
 
 // Questions
-router.post('/questions', categoryController.createQuestion);
-router.patch('/questions/:id', categoryController.updateQuestion);
-router.delete('/questions/:id', categoryController.deleteQuestion);
+router.post('/questions', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.createQuestion);
+router.patch('/questions/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.updateQuestion);
+router.delete('/questions/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.deleteQuestion);
 
 // Answers
-router.post('/answers', categoryController.createAnswer);
-router.patch('/answers/:id', categoryController.updateAnswer);
-router.delete('/answers/:id', categoryController.deleteAnswer);
+router.post('/answers', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.createAnswer);
+router.patch('/answers/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.updateAnswer);
+router.delete('/answers/:id', auth.protect, auth.restrictTo('Admin', 'Büro'), categoryController.deleteAnswer);
 
 module.exports = router;
