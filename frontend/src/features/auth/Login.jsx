@@ -1,0 +1,107 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { login, clearError } from '../../store/slices/authSlice';
+
+const Login = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
+        return () => {
+            dispatch(clearError());
+        };
+    }, [isAuthenticated, navigate, dispatch]);
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        if (email && password) {
+            dispatch(login({ email, password }));
+        }
+    };
+
+    return (
+        <div className="h-screen w-screen flex items-center justify-center p-4">
+            <div className="glass-panel w-full max-w-md p-8 rounded-3xl animate-[fadeIn_0.5s_ease-out_forwards]">
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-400/30 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+                        <i className="fa-solid fa-helmet-safety text-blue-400 text-3xl"></i>
+                    </div>
+                    <h1 className="text-3xl font-bold tracking-wider text-white">Build<span className="text-blue-400">Admin</span></h1>
+                    <p className="text-slate-400 mt-2">Internes CRM System</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="flex flex-col gap-5">
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-3 animate-[pulse_2s_ease-in-out_infinite]">
+                            <i className="fa-solid fa-circle-exclamation"></i>
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm text-slate-300 font-medium px-1">E-Mail Adresse</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                <i className="fa-solid fa-envelope"></i>
+                            </div>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                placeholder="name@firma.de"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm text-slate-300 font-medium px-1">Passwort</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                <i className="fa-solid fa-lock"></i>
+                            </div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? (
+                            <i className="fa-solid fa-circle-notch fa-spin"></i>
+                        ) : (
+                            <>
+                                Anmelden
+                                <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </>
+                        )}
+                    </button>
+
+                    <a href="#" className="text-center text-sm text-slate-400 hover:text-blue-400 transition-colors mt-2">
+                        Passwort vergessen?
+                    </a>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+export default Login;

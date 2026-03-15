@@ -1,0 +1,41 @@
+const { DataTypes } = require('sequelize');
+const sequelize = require('../../config/database');
+
+const Note = sequelize.define('Note', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    content: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+    },
+    color: {
+        type: DataTypes.STRING,
+        defaultValue: 'blue',
+        allowNull: false
+    },
+    project_id: {
+        type: DataTypes.UUID,
+        allowNull: true
+    },
+    isDone: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
+    tableName: 'notes',
+    timestamps: true,
+    paranoid: true, // Soft deletes
+});
+
+module.exports = Note;

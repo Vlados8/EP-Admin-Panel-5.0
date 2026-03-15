@@ -1,0 +1,129 @@
+const { User, Role, Company } = require('../../domain/models');
+const bcrypt = require('bcryptjs');
+
+exports.getAllUsers = async (req, res, next) => {
+    try {
+        // TODO: In production, filter by req.user.company_id
+        const users = await User.findAll({
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                { model: Role, as: 'role', attributes: ['id', 'name'] },
+                { model: Company, as: 'company', attributes: ['id', 'name'] },
+                { model: User, as: 'manager', attributes: ['id', 'name'] }
+            ]
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: { users }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.createUser = async (req, res, next) => {
+    try {
+        const { name, email, phone, password, role_id, company_id, manager_id, specialty } = req.body;
+
+        if (!name || !email || !password || !company_id) {
+            return res.status(400).json({ status: 'fail', message: 'Missing required fields' });
+        }
+
+        const existingUser = await User.findOne({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ status: 'fail', message: 'Email is already in use' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await User.create({
+            name,
+            email,
+            phone: phone || null,
+            password_hash: hashedPassword,
+            role_id: role_id || null,
+            manager_id: manager_id || null,
+            specialty: specialty || null,
+            company_id
+        });
+
+        res.status(201).json({
+            status: 'success',
+            data: {
+                user: {
+                    id: newUser.id,
+                    name: newUser.name,
+                    email: newUser.email,
+                    phone: newUser.phone,
+                    role_id: newUser.role_id,
+                    manager_id: newUser.manager_id,
+                    specialty: newUser.specialty,
+                    company_id: newUser.company_id
+                }
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.updateUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { name, email, phone, role_id, status, manager_id, specialty } = req.body;
+
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
+        }
+
+        user.name = name || user.name;
+        user.email = email || user.email;
+        user.phone = phone !== undefined ? phone : user.phone;
+        user.role_id = role_id !== undefined ? role_id : user.role_id;
+        user.manager_id = manager_id !== undefined ? manager_id : user.manager_id;
+        user.specialty = specialty !== undefined ? specialty : user.specialty;
+        user.status = status || user.status;
+
+        await user.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    role_id: user.role_id,
+                    manager_id: user.manager_id,
+                    specialty: user.specialty,
+                    status: user.status
+                }
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findByPk(id);
+
+        if (!user) {
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
+        }
+
+        await user.destroy(); // Note: we have paranoid: true, so this is a soft delete
+
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (err) {
+        next(err);
+    }
+};
