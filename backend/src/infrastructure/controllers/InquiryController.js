@@ -3,7 +3,15 @@ const AppError = require('../../utils/appError');
 
 exports.getAllInquiries = async (req, res, next) => {
     try {
+        const whereClause = {};
+        const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
+        
+        if (cid) {
+            whereClause.company_id = cid;
+        }
+
         const inquiries = await Inquiry.findAll({
+            where: whereClause,
             include: [
                 { model: Category, as: 'category', attributes: ['id', 'name'] },
                 { model: Subcategory, as: 'subcategory', attributes: ['id', 'name'] },

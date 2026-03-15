@@ -8,11 +8,14 @@ const AppError = require('../../utils/appError');
  */
 module.exports = async (req, res, next) => {
     try {
-        let authHeader = req.headers.authorization;
-        let apiKey = req.headers['x-api-key'];
+        const authHeader = req.headers.authorization;
+        const apiKey = req.headers['x-api-key'];
+
+        // Ensure req.body exists (helpful for GET requests or when body-parser hasn't run)
+        if (!req.body) req.body = {};
         
         // 1. Check for JWT first (Normal User Flow)
-        if (authHeader && authHeader.startsWith('Bearer ')) {
+        if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
             const token = authHeader.split(' ')[1];
             
             try {
@@ -31,16 +34,21 @@ module.exports = async (req, res, next) => {
                         req.body.company_id = currentUser.company_id;
                     }
                     return next();
+                } else {
+                    console.log(`[flexibleAuth] User not found for ID: ${decoded.id}`);
                 }
             } catch (jwtErr) {
                 // If it's not a valid JWT, it might be an API Key passed as Bearer token
-                // We'll fall through to API Key check
+                // Log only if it's not a common "expired" or "malformed" error that we expect from external sites
+                if (jwtErr.name !== 'JsonWebTokenError' && jwtErr.name !== 'TokenExpiredError') {
+                    console.error('[flexibleAuth] JWT Verification Error:', jwtErr.message);
+                }
             }
         }
 
         // 2. Check for API Key (External Site Flow)
         let keyToVerify = apiKey;
-        if (!keyToVerify && authHeader && authHeader.startsWith('Bearer ')) {
+        if (!keyToVerify && authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
             keyToVerify = authHeader.split(' ')[1];
         }
 
@@ -59,12 +67,16 @@ module.exports = async (req, res, next) => {
                 req.source_website = apiKeyRecord.name_or_domain;
                 req.body.company_id = apiKeyRecord.company_id;
                 return next();
+            } else {
+                console.log(`[flexibleAuth] Invalid or inactive API Key: ${keyToVerify.substring(0, 8)}...`);
             }
         }
 
         // 3. Fallback: Unauthorized
+        console.log(`[flexibleAuth] Unauthorized access attempt to ${req.originalUrl} from ${req.ip}`);
         return next(new AppError('No valid authentication provided (JWT or API Key required)', 401));
     } catch (err) {
+        console.error('[flexibleAuth] Critical middleware error:', err);
         next(err);
     }
 };

@@ -4,8 +4,10 @@ const AppError = require('../../utils/appError');
 exports.getAllCategories = async (req, res, next) => {
     try {
         const whereClause = {};
-        if (req.body.company_id) {
-            whereClause.company_id = req.body.company_id;
+        const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
+        
+        if (cid) {
+            whereClause.company_id = cid;
         }
 
         const categories = await Category.findAll({
