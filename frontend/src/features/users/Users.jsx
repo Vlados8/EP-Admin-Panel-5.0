@@ -32,6 +32,13 @@ const Users = () => {
         setEditUserId(null);
     };
 
+    const getInitials = (name) => {
+        if (!name) return '??';
+        const parts = name.trim().split(' ');
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
     useEffect(() => {
         fetchUsers();
         fetchRoles();
@@ -237,7 +244,9 @@ const Users = () => {
                                 <tr key={user.id} className="hover:bg-white/5 transition-colors group">
                                     <td className="p-4 flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600/50 to-purple-600/50 p-[2px]">
-                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1a1a1a&color=fff`} className="w-full h-full rounded-full border border-white/10" alt="avatar" />
+                                            <div className="w-full h-full rounded-full border border-white/10 flex items-center justify-center text-xs font-bold text-white bg-[#1a1a1a]">
+                                                {getInitials(user.name)}
+                                            </div>
                                         </div>
                                         <div>
                                             <div className="font-medium flex items-center gap-2">
@@ -264,7 +273,9 @@ const Users = () => {
                                     <td className="p-4">
                                         {user.manager ? (
                                             <div className="flex items-center gap-2 text-gray-300 bg-white/5 px-2 py-1 rounded-lg w-fit">
-                                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.manager.name)}&size=24&background=222&color=aaa`} className="rounded-full" alt="manager" />
+                                                <div className="w-6 h-6 rounded-full bg-[#222] border border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                                    {getInitials(user.manager.name)}
+                                                </div>
                                                 {user.manager.name}
                                             </div>
                                         ) : <span className="text-gray-500 text-xs italic">-</span>}
