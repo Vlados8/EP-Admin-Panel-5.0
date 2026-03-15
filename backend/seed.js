@@ -10,7 +10,7 @@ async function seed() {
 
         // Need to drop and sync models to ensure fresh tables for the new architecture:
         await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-        await sequelize.sync({ force: true });
+        await sequelize.sync({ force: false });
         await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
         console.log('Database wiped and models synced.');
 

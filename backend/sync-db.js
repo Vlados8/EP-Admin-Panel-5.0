@@ -7,7 +7,7 @@ async function syncDb() {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
         // Force true drops existing tables and recreates them
-        await sequelize.sync({ force: true });
+        await sequelize.sync({ force: false });
         console.log('Database reconstructed with force:true');
         process.exit(0);
     } catch (error) {

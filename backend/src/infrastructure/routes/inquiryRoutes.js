@@ -7,7 +7,8 @@ const flexibleAuth = require('../middlewares/flexibleAuth');
 const router = express.Router();
 
 // Маршруты, требующие JWT (админка/менеджеры)
-router.get('/', auth.protect, inquiryController.getAllInquiries);
+// Маршруты, требующие JWT (админка/менеджеры) или API-ключ
+router.get('/', flexibleAuth, inquiryController.getAllInquiries);
 router.get('/:id', auth.protect, inquiryController.getInquiry);
 router.put('/:id', auth.protect, inquiryController.updateInquiry);
 router.patch('/:id', auth.protect, inquiryController.updateInquiryStatus);
