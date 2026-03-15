@@ -62,6 +62,10 @@ exports.createTicket = async (req, res, next) => {
     try {
         let { company_id, client_id, client_name, client_email, client_phone, project_id, subject, description, priority, source_website } = req.body;
 
+        if (!company_id && req.user?.company_id) {
+            company_id = req.user.company_id;
+        }
+
         if (!company_id) {
             const company = await Company.findOne();
             if (company) company_id = company.id;

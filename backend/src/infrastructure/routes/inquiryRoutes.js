@@ -2,6 +2,7 @@ const express = require('express');
 const inquiryController = require('../controllers/InquiryController');
 const auth = require('../middlewares/auth');
 const apiKeyAuth = require('../middlewares/apiKeyAuth');
+const flexibleAuth = require('../middlewares/flexibleAuth');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.put('/:id', auth.protect, inquiryController.updateInquiry);
 router.patch('/:id', auth.protect, inquiryController.updateInquiryStatus);
 router.delete('/:id', auth.protect, inquiryController.deleteInquiry);
 
-// Публичный маршрут создания через API Key
-router.post('/', apiKeyAuth, inquiryController.createInquiry);
+// Гибкий маршрут создания (JWT для админки или API Key для сайтов)
+router.post('/', flexibleAuth, inquiryController.createInquiry);
 
 module.exports = router;

@@ -67,6 +67,9 @@ exports.createInquiry = async (req, res, next) => {
         } = req.body;
 
         let cid = company_id;
+        if (!cid && req.user?.company_id) {
+            cid = req.user.company_id;
+        }
         if (!cid) {
             const company = await Company.findOne();
             if (company) cid = company.id;
