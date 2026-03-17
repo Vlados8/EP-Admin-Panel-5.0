@@ -2,12 +2,13 @@ const { SupportTicket, SupportResponse, Client, Project, User } = require('../..
 
 exports.getTickets = async (req, res, next) => {
     try {
-        const { status, priority, company_id } = req.query;
-        // Basic filtering setup
+        const { status, priority } = req.query;
+        const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
+
         const whereClause = {};
         if (status) whereClause.status = status;
         if (priority) whereClause.priority = priority;
-        if (company_id) whereClause.company_id = company_id; // In production, this should come from req.user
+        if (cid) whereClause.company_id = cid;
 
         const tickets = await SupportTicket.findAll({
             where: whereClause,
@@ -124,10 +125,11 @@ exports.updateTicketStatus = async (req, res, next) => {
 exports.addResponse = async (req, res, next) => {
     try {
         const { id } = req.params; // ticket_id
-        const { user_id, message, response_type } = req.body; // user_id should come from auth in prod
+        const { message, response_type } = req.body;
+        const user_id = req.user?.id || req.body.user_id;
 
         if (!user_id || !message) {
-            return res.status(400).json({ status: 'fail', message: 'user_id and message are required' });
+            return res.status(400).json({ status: 'fail', message: 'user_id (from auth or body) and message are required' });
         }
 
         const user = await User.findByPk(user_id);

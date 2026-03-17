@@ -7,10 +7,10 @@ const flexibleAuth = require('../middlewares/flexibleAuth');
 const router = express.Router();
 
 // Маршруты поддержки
-router.get('/', auth.protect, supportController.getTickets);
+router.get('/', flexibleAuth, supportController.getTickets);
 router.post('/', flexibleAuth, supportController.createTicket); // Гибкий через JWT или API Key
 router.get('/:id', auth.protect, supportController.getTicketDetails);
-router.patch('/:id/status', auth.protect, supportController.updateTicketStatus);
-router.post('/:id/responses', auth.protect, supportController.addResponse);
+router.patch('/:id/status', auth.protect, auth.restrictTo('Admin', 'Büro'), supportController.updateTicketStatus);
+router.post('/:id/responses', auth.protect, auth.restrictTo('Admin', 'Büro'), supportController.addResponse);
 
 module.exports = router;
