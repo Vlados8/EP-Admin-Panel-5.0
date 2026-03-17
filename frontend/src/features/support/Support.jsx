@@ -231,6 +231,12 @@ const Support = () => {
                                     <p className="text-xs text-gray-400 truncate">
                                         {ticket.project ? `Projekt: ${ticket.project.title}` : (ticket.client?.name || ticket.client_name) ? `Kunde: ${ticket.client?.name || ticket.client_name}` : 'Unzugewiesen'}
                                     </p>
+                                    {ticket.source_website && (
+                                        <div className="mt-1 flex items-center gap-1">
+                                            <i className="fa-solid fa-globe text-[10px] text-blue-400"></i>
+                                            <span className="text-[10px] text-blue-400 truncate">{ticket.source_website}</span>
+                                        </div>
+                                    )}
                                 </div>
                             ))
                         )}
@@ -257,8 +263,13 @@ const Support = () => {
                                         <h3 className="text-lg lg:text-xl font-bold truncate pr-2">{ticketDetails.subject}</h3>
                                         {getPriorityBadge(ticketDetails.priority)}
                                     </div>
-                                    <p className="text-sm text-gray-400 mb-1 lg:pl-8">
-                                        Ticket #SUP-{ticketDetails.id} • Gemeldet von: {(ticketDetails.client?.name || ticketDetails.client_name) ? (ticketDetails.client?.name || ticketDetails.client_name) : 'Unbekannt'}
+                                    <p className="text-sm text-gray-400 mb-1 lg:pl-8 flex items-center gap-2">
+                                        <span>Ticket #SUP-{ticketDetails.id} • Gemeldet von: {(ticketDetails.client?.name || ticketDetails.client_name) ? (ticketDetails.client?.name || ticketDetails.client_name) : 'Unbekannt'}</span>
+                                        {ticketDetails.source_website && (
+                                            <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full text-[10px] border border-blue-500/20 flex items-center gap-1">
+                                                <i className="fa-solid fa-globe"></i> {ticketDetails.source_website}
+                                            </span>
+                                        )}
                                     </p>
                                     {((ticketDetails.client?.email || ticketDetails.client_email) || (ticketDetails.client?.phone || ticketDetails.client_phone)) && (
                                         <p className="text-xs text-gray-300 lg:pl-8 break-all">
