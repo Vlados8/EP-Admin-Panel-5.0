@@ -49,143 +49,136 @@ async function seedDatabase() {
         }
 
         // 4. Decision Tree Categories (PV & WP)
-        console.log('Seeding Merged Decision Tree...');
-
-        // --- Cleanup Existing PV/WP for clean re-seed ---
-        // (Optional but helpful for debugging structural changes)
-        // await Category.destroy({ where: { name: ['Photovoltaik (PV)', 'Wärmepumpe (WP)'] } });
+        console.log('Seeding Detailed Decision Tree (PV & WP)...');
 
         // --- Photovoltaik (PV) ---
         const [catPV] = await Category.findOrCreate({
             where: { name: 'Photovoltaik (PV)', company_id: company.id },
-            defaults: { description: 'Solaranlagen und Speicher', icon: 'fa-solar-panel', order_index: 0 }
+            defaults: { description: 'Solaranlagen und Energiesysteme', icon: 'fa-solar-panel', order_index: 0 }
         });
 
-        const [pvSub] = await Subcategory.findOrCreate({
-            where: { name: 'PV Konfiguration', category_id: catPV.id },
-            defaults: { description: 'Dachdetails & Planung', order_index: 0 }
+        const [pvMain] = await Subcategory.findOrCreate({
+            where: { name: 'Gebäude & Planung', category_id: catPV.id },
+            defaults: { description: 'Angaben zum Haus und zur PV-Anlage', order_index: 0 }
         });
 
-        // Questions for PV (Merged Old + New)
-        // Note: 'type' must match ENUM: 'radio', 'checkbox', 'input', 'select', 'slider'
         const questionsPV = [
-            {
-                text: 'Welche Form hat das Dach?',
-                type: 'radio',
-                answers: ['Satteldach', 'Pultdach', 'Flachdach', 'Sonstiges']
-            },
-            {
-                text: 'Woraus besteht die Dacheindeckung?',
-                type: 'radio',
-                answers: ['Ziegel', 'Schiefer', 'Trapezblech', 'Eternit', 'Sonstiges']
-            },
-            {
-                text: 'Wie hoch ist Ihr jährlicher Stromverbrauch?',
-                type: 'slider',
-                config: { min: 1000, max: 20000, step: 500, default: 4000 },
-                unit: 'kWh'
-            },
-            {
-                text: 'Gewünschte PV-Leistung auf dem Dach (kWp)?',
-                type: 'radio',
-                answers: ['Beratung durch Experten', 'Bis 5 kWp', '5-10 kWp', '10-15 kWp', 'Über 15 kWp']
-            },
-            {
-                text: 'Benötigen Sie eine Wallbox (Ladestation)?',
-                type: 'radio',
-                answers: ['Ja, bitte mit planen', 'Nein, bereits vorhanden', 'Nein, nicht benötigt']
-            },
-            {
-                text: 'Stromspeicher (Batterie) erwünscht?',
-                type: 'radio',
-                answers: ['Ja, bitte mit planen', 'Nein, nicht benötigt', 'Beratung dazu gewünscht']
-            },
-            {
-                text: 'Wann soll die Installation erfolgen?',
-                type: 'radio',
-                answers: ['Sofort', 'In 3 Monaten', 'In 6 Monaten+', 'Noch in Planung']
-            }
+            { text: 'Um welche Art von Gebäude handelt es sich?', type: 'buttons', field_key: 'pv.hausart', order_index: 0 },
+            { text: 'Wie groß ist die Dachfläche (ca.)?', type: 'slider', field_key: 'pv.flaeche', unit: 'm²', config: { min: 50, max: 300, step: 10, default: 120 }, order_index: 1 },
+            { text: 'Wie viel Leistung wünschen Sie (kWp)?', type: 'slider', field_key: 'pv.leistung', unit: 'kWp', config: { min: 3, max: 20, step: 1, default: 8 }, order_index: 2 },
+            { text: 'Welche Dachform hat Ihr Haus?', type: 'buttons', field_key: 'pv.dachform', order_index: 3 },
+            { text: 'Welche Dacheindeckung haben Sie?', type: 'buttons', field_key: 'pv.eindeckung', order_index: 4 },
+            { text: 'Möchten Sie einen Stromspeicher?', type: 'buttons', field_key: 'pv.speicher', order_index: 5 },
+            { text: 'Welche Speichergröße wünschen Sie?', type: 'buttons', field_key: 'pv.speicher_groesse', order_index: 6 },
+            { text: 'Benötigen Sie eine Notstromfunktion?', type: 'buttons', field_key: 'pv.notstrom', order_index: 7 },
+            { text: 'Haben Sie bereits eine Wallbox (E-Auto Ladestation)?', type: 'buttons', field_key: 'pv.wallbox', order_index: 8 },
+            { text: 'Möchten Sie eine Wallbox installieren?', type: 'buttons', field_key: 'pv.wallbox_neu', order_index: 9 },
+            { text: 'Wann möchten Sie das Projekt starten?', type: 'buttons', field_key: 'pv.start', order_index: 10 }
         ];
 
-        for (let i = 0; i < questionsPV.length; i++) {
-            const qData = questionsPV[i];
+        const qPV = {};
+        for (const qData of questionsPV) {
             const [question] = await Question.findOrCreate({
-                where: { question_text: qData.text, subcategory_id: pvSub.id },
-                defaults: { type: qData.type, config: qData.config, unit: qData.unit, order_index: i }
+                where: { subcategory_id: pvMain.id, question_text: qData.text },
+                defaults: { type: qData.type, field_key: qData.field_key, unit: qData.unit, config: qData.config, order_index: qData.order_index }
             });
+            qPV[qData.text] = question;
+        }
 
-            if (qData.answers) {
-                for (let j = 0; j < qData.answers.length; j++) {
-                    await Answer.findOrCreate({
-                        where: { answer_text: qData.answers[j], question_id: question.id },
-                        defaults: { order_index: j }
-                    });
-                }
-            }
+        // PV Answers & Logic
+        const pvAnswers = [
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Einfamilienhaus', next: 'Wie groß ist die Dachfläche (ca.)?' },
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Reihenhaus', next: 'Wie groß ist die Dachfläche (ca.)?' },
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Mehrfamilienhaus', next: 'Wie groß ist die Dachfläche (ca.)?' },
+            { q: 'Wie groß ist die Dachfläche (ca.)?', text: 'Weiter', next: 'Wie viel Leistung wünschen Sie (kWp)?' },
+            { q: 'Wie viel Leistung wünschen Sie (kWp)?', text: 'Weiter', next: 'Welche Dachform hat Ihr Haus?' },
+            { q: 'Welche Dachform hat Ihr Haus?', text: 'Satteldach', next: 'Welche Dacheindeckung haben Sie?' },
+            { q: 'Welche Dachform hat Ihr Haus?', text: 'Flachdach', next: 'Welche Dacheindeckung haben Sie?' },
+            { q: 'Welche Dachform hat Ihr Haus?', text: 'Pultdach', next: 'Welche Dacheindeckung haben Sie?' },
+            { q: 'Welche Dacheindeckung haben Sie?', text: 'Ziegel', next: 'Möchten Sie einen Stromspeicher?' },
+            { q: 'Welche Dacheindeckung haben Sie?', text: 'Blech', next: 'Möchten Sie einen Stromspeicher?' },
+            { q: 'Welche Dacheindeckung haben Sie?', text: 'Schiefer', next: 'Möchten Sie einen Stromspeicher?' },
+            { q: 'Möchten Sie einen Stromspeicher?', text: 'Ja', next: 'Welche Speichergröße wünschen Sie?' },
+            { q: 'Möchten Sie einen Stromspeicher?', text: 'Nein', next: 'Benötigen Sie eine Notstromfunktion?' },
+            { q: 'Welche Speichergröße wünschen Sie?', text: '5 kWh', next: 'Benötigen Sie eine Notstromfunktion?' },
+            { q: 'Welche Speichergröße wünschen Sie?', text: '10 kWh', next: 'Benötigen Sie eine Notstromfunktion?' },
+            { q: 'Welche Speichergröße wünschen Sie?', text: '15+ kWh', next: 'Benötigen Sie eine Notstromfunktion?' },
+            { q: 'Benötigen Sie eine Notstromfunktion?', text: 'Ja', next: 'Haben Sie bereits eine Wallbox (E-Auto Ladestation)?' },
+            { q: 'Benötigen Sie eine Notstromfunktion?', text: 'Nein', next: 'Haben Sie bereits eine Wallbox (E-Auto Ladestation)?' },
+            { q: 'Haben Sie bereits eine Wallbox (E-Auto Ladestation)?', text: 'Ja', next: 'Wann möchten Sie das Projekt starten?' },
+            { q: 'Haben Sie bereits eine Wallbox (E-Auto Ladestation)?', text: 'Nein', next: 'Möchten Sie eine Wallbox installieren?' },
+            { q: 'Möchten Sie eine Wallbox installieren?', text: 'Ja', next: 'Wann möchten Sie das Projekt starten?' },
+            { q: 'Möchten Sie eine Wallbox installieren?', text: 'Nein', next: 'Wann möchten Sie das Projekt starten?' },
+            { q: 'Wann möchten Sie das Projekt starten?', text: 'Sofort', next: null },
+            { q: 'Wann möchten Sie das Projekt starten?', text: 'In 1–3 Monaten', next: null },
+            { q: 'Wann möchten Sie das Projekt starten?', text: 'Später', next: null }
+        ];
+
+        for (const aData of pvAnswers) {
+            const question = qPV[aData.q];
+            const nextQuestion = aData.next ? qPV[aData.next] : null;
+            await Answer.findOrCreate({
+                where: { question_id: question.id, answer_text: aData.text },
+                defaults: { next_question_id: nextQuestion ? nextQuestion.id : null }
+            });
         }
 
         // --- Wärmepumpe (WP) ---
         const [catWP] = await Category.findOrCreate({
             where: { name: 'Wärmepumpe (WP)', company_id: company.id },
-            defaults: { description: 'Effiziente Heizsysteme', icon: 'fa-fire-burner', order_index: 1 }
+            defaults: { description: 'Effiziente Heizlösungen', icon: 'fa-fire-burner', order_index: 1 }
         });
 
-        const [wpSub] = await Subcategory.findOrCreate({
-            where: { name: 'WP Konfiguration', category_id: catWP.id },
-            defaults: { description: 'Haus details & Planung', order_index: 0 }
+        const [wpMain] = await Subcategory.findOrCreate({
+            where: { name: 'Gebäude & Basisdaten', category_id: catWP.id },
+            defaults: { description: 'Grundlegende Informationen zum Projekt', order_index: 0 }
         });
 
-        // Questions for WP (Merged Old + New)
         const questionsWP = [
-            {
-                text: 'Art des Gebäudes?',
-                type: 'radio',
-                answers: ['Einfamilienhaus', 'Reihenhaus', 'Mehrfamilienhaus', 'Gewerbe']
-            },
-            {
-                text: 'Wie groß ist die zu beheizende Wohnfläche?',
-                type: 'slider',
-                config: { min: 50, max: 500, step: 10, default: 150 },
-                unit: 'm²'
-            },
-            {
-                text: 'Voraussichtlicher Energiebedarf pro Jahr?',
-                type: 'slider',
-                config: { min: 5000, max: 50000, step: 1000, default: 20000 },
-                unit: 'kWh'
-            },
-            {
-                text: 'Was ist Ihre aktuelle Heizungsart?',
-                type: 'radio',
-                answers: ['Gasheizung', 'Ölheizung', 'Elektroheizung', 'Sonstiges']
-            },
-            {
-                text: 'Wie erfolgt die Wärmeabgabe im Haus?',
-                type: 'radio',
-                answers: ['Fußbodenheizung', 'Heizkörper', 'Mix (Fußboden & Heizkörper)']
-            },
-            {
-                text: 'Gebäude-Zustand / Dämmung?',
-                type: 'radio',
-                answers: ['Neubau / Passivhaus', 'Gut gedämmter Altbau', 'Teilsaniert', 'Ungedämmt']
-            }
+            { text: 'Um welche Art von Gebäude handelt es sich?', type: 'buttons', field_key: 'wp.hausart', order_index: 0 },
+            { text: 'Sind Sie Eigentümer der Immobilie?', type: 'buttons', field_key: 'wp.eigentuemer', order_index: 1 },
+            { text: 'Wie gut ist Ihr Haus gedämmt?', type: 'buttons', field_key: 'wp.daemmung', order_index: 2 },
+            { text: 'Wie groß ist die Wohnfläche?', type: 'slider', field_key: 'wp.flaeche', unit: 'm²', config: { min: 50, max: 400, step: 10, default: 150 }, order_index: 3 },
+            { text: 'Welche Heizung nutzen Sie aktuell?', type: 'buttons', field_key: 'wp.heizung', order_index: 4 },
+            { text: 'Wann möchten Sie die Wärmepumpe installieren?', type: 'buttons', field_key: 'wp.start', order_index: 5 }
         ];
 
-        for (let i = 0; i < questionsWP.length; i++) {
-            const qData = questionsWP[i];
+        const qWP = {};
+        for (const qData of questionsWP) {
             const [question] = await Question.findOrCreate({
-                where: { question_text: qData.text, subcategory_id: wpSub.id },
-                defaults: { type: qData.type, config: qData.config, unit: qData.unit, order_index: i }
+                where: { subcategory_id: wpMain.id, question_text: qData.text },
+                defaults: { type: qData.type, field_key: qData.field_key, unit: qData.unit, config: qData.config, order_index: qData.order_index }
             });
+            qWP[qData.text] = question;
+        }
 
-            if (qData.answers) {
-                for (let j = 0; j < qData.answers.length; j++) {
-                    await Answer.findOrCreate({
-                        where: { answer_text: qData.answers[j], question_id: question.id },
-                        defaults: { order_index: j }
-                    });
-                }
-            }
+        // WP Answers & Logic
+        const wpAnswers = [
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Einfamilienhaus', next: 'Sind Sie Eigentümer der Immobilie?' },
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Reihenhaus', next: 'Sind Sie Eigentümer der Immobilie?' },
+            { q: 'Um welche Art von Gebäude handelt es sich?', text: 'Mehrfamilienhaus', next: 'Sind Sie Eigentümer der Immobilie?' },
+            { q: 'Sind Sie Eigentümer der Immobilie?', text: 'Ja', next: 'Wie gut ist Ihr Haus gedämmt?' },
+            { q: 'Sind Sie Eigentümer der Immobilie?', text: 'Nein', next: 'Wie gut ist Ihr Haus gedämmt?' },
+            { q: 'Wie gut ist Ihr Haus gedämmt?', text: 'Gut', next: 'Wie groß ist die Wohnfläche?' },
+            { q: 'Wie gut ist Ihr Haus gedämmt?', text: 'Mittel', next: 'Wie groß ist die Wohnfläche?' },
+            { q: 'Wie gut ist Ihr Haus gedämmt?', text: 'Schlecht', next: 'Wie groß ist die Wohnfläche?' },
+            { q: 'Wie groß ist die Wohnfläche?', text: 'Weiter', next: 'Welche Heizung nutzen Sie aktuell?' },
+            { q: 'Welche Heizung nutzen Sie aktuell?', text: 'Gas', next: 'Wann möchten Sie die Wärmepumpe installieren?' },
+            { q: 'Welche Heizung nutzen Sie aktuell?', text: 'Öl', next: 'Wann möchten Sie die Wärmepumpe installieren?' },
+            { q: 'Welche Heizung nutzen Sie aktuell?', text: 'Strom', next: 'Wann möchten Sie die Wärmepumpe installieren?' },
+            { q: 'Welche Heizung nutzen Sie aktuell?', text: 'Andere', next: 'Wann möchten Sie die Wärmepumpe installieren?' },
+            { q: 'Wann möchten Sie die Wärmepumpe installieren?', text: 'Sofort', next: null },
+            { q: 'Wann möchten Sie die Wärmepumpe installieren?', text: 'In 1–3 Monaten', next: null },
+            { q: 'Wann möchten Sie die Wärmepumpe installieren?', text: 'Später', next: null }
+        ];
+
+        for (const aData of wpAnswers) {
+            const question = qWP[aData.q];
+            const nextQuestion = aData.next ? qWP[aData.next] : null;
+            await Answer.findOrCreate({
+                where: { question_id: question.id, answer_text: aData.text },
+                defaults: { next_question_id: nextQuestion ? nextQuestion.id : null }
+            });
         }
 
         console.log('--- Initial Seeding Completed Successfully ---');
