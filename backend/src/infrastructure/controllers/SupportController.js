@@ -86,7 +86,7 @@ exports.createTicket = async (req, res, next) => {
             subject,
             description,
             priority: priority || 'normal',
-            source_website: source_website || null // Сохраняем сайт-источник тикета
+            source_website: source_website || req.source_website || null // Сохраняем сайт-источник тикета
         });
 
         res.status(201).json({
