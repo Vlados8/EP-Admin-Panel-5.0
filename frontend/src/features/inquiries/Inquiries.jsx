@@ -114,10 +114,21 @@ const Inquiries = () => {
 
     const handleAnswerQuestion = (question, answerValue, answerId, nextQuestionId) => {
         setDynamicAnswers(prev => ({ ...prev, [question.id]: { value: answerValue, answerId } }));
-        if (nextQuestionId) {
-            const nextQ = selectedSubcategory?.questions?.find(q => q.id === nextQuestionId);
-            if (nextQ) setCurrentQuestion(nextQ);
-            else setWizardStep(4);
+        
+        // Determine the next question ID
+        let targetNextQId = nextQuestionId;
+        if (!targetNextQId && question.answers && question.answers.length > 0) {
+            // Fallback: use the next_question_id from the first configured answer (common for sliders/inputs)
+            targetNextQId = question.answers[0].next_question_id;
+        }
+
+        if (targetNextQId) {
+            const nextQ = selectedSubcategory?.questions?.find(q => q.id === targetNextQId);
+            if (nextQ) {
+                setCurrentQuestion(nextQ);
+            } else {
+                setWizardStep(4);
+            }
         } else {
             setWizardStep(4);
         }
@@ -497,6 +508,7 @@ const Inquiries = () => {
                                             <button
                                                 onClick={() => {
                                                     const val = document.getElementById('temp-slider').value;
+                                                    // Pass nulls to trigger the fallback logic in handleAnswerQuestion
                                                     handleAnswerQuestion(currentQuestion, `${val} ${currentQuestion.unit || ''}`, null, null);
                                                 }}
                                                 className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-8 py-3 rounded-xl transition-colors shadow-lg"

@@ -208,12 +208,21 @@ const ProjectWizard = ({ isOpen, onClose, onProjectCreated, initialData = null }
 
     const handleAnswerQuestion = (question, answerValue, answerId, nextQuestionId) => {
         setDynamicAnswers(prev => ({ ...prev, [question.id]: { value: answerValue, answerId } }));
-        if (nextQuestionId) {
-            // Because the frontend data structure fetched from /categories holds all questions for a subcategory
-            // directly in subcat.questions (flat list per subcat), we can just .find it directly.
-            const nextQ = selectedSubcategory?.questions?.find(q => q.id === nextQuestionId);
-            if (nextQ) setCurrentQuestion(nextQ);
-            else setStep(4);
+        
+        // Determine the next question ID
+        let targetNextQId = nextQuestionId;
+        if (!targetNextQId && question.answers && question.answers.length > 0) {
+            // Fallback: use the next_question_id from the first configured answer (common for sliders/inputs)
+            targetNextQId = question.answers[0].next_question_id;
+        }
+
+        if (targetNextQId) {
+            const nextQ = selectedSubcategory?.questions?.find(q => q.id === targetNextQId);
+            if (nextQ) {
+                setCurrentQuestion(nextQ);
+            } else {
+                setStep(4);
+            }
         } else {
             setStep(4);
         }
@@ -541,6 +550,32 @@ const ProjectWizard = ({ isOpen, onClose, onProjectCreated, initialData = null }
                                                     <div className="mt-4 flex justify-center text-gray-500">
                                                         <i className="fa-solid fa-chevron-down animate-bounce"></i>
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {currentQuestion.type === 'slider' && (
+                                                <div className="max-w-xl mx-auto bg-slate-800 border border-white/10 p-8 rounded-2xl shadow-lg">
+                                                    <input
+                                                        type="range"
+                                                        min={currentQuestion.config?.min || 0}
+                                                        max={currentQuestion.config?.max || 100}
+                                                        step={currentQuestion.config?.step || 1}
+                                                        defaultValue={currentQuestion.config?.min || 0}
+                                                        onChange={(e) => {
+                                                            document.getElementById('slider-val-display-proj').innerText = `${e.target.value} ${currentQuestion.unit || ''}`;
+                                                        }}
+                                                        id="temp-slider-proj"
+                                                        className="w-full h-3 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500 mb-6"
+                                                    />
+                                                    <div id="slider-val-display-proj" className="text-4xl font-bold text-blue-400 mb-8">{currentQuestion.config?.min || 0} {currentQuestion.unit || ''}</div>
+                                                    <button
+                                                        onClick={() => {
+                                                            const val = document.getElementById('temp-slider-proj').value;
+                                                            // Pass nulls to trigger the fallback logic in handleAnswerQuestion
+                                                            handleAnswerQuestion(currentQuestion, `${val} ${currentQuestion.unit || ''}`, null, null);
+                                                        }}
+                                                        className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-8 py-3 rounded-xl transition-colors shadow-lg w-full"
+                                                    >Weiter</button>
                                                 </div>
                                             )}
 

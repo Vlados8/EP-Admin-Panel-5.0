@@ -35,7 +35,8 @@ const Answer = sequelize.define('Answer', {
     }
 }, {
     tableName: 'answers',
-    timestamps: true
+    timestamps: true,
+    paranoid: true
 });
 
 module.exports = Answer;

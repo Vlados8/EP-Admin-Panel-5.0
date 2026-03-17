@@ -4,11 +4,11 @@ const AppError = require('../../utils/appError');
 exports.getAllCategories = async (req, res, next) => {
     try {
         const whereClause = {};
-        const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
-        
-        if (cid) {
-            whereClause.company_id = cid;
-        }
+        // Removed strict company_id filtering to show all categories as requested by user
+        // const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
+        // if (cid) {
+        //     whereClause.company_id = cid;
+        // }
 
         const categories = await Category.findAll({
             where: whereClause,
@@ -52,7 +52,7 @@ exports.getAllCategories = async (req, res, next) => {
 // --- CATEGORY ---
 exports.createCategory = async (req, res, next) => {
     try {
-        let cid = req.body.company_id;
+        let cid = (req.user && req.user.company_id) || req.body.company_id;
         if (!cid) {
             const company = await Company.findOne();
             if (company) cid = company.id;
@@ -74,8 +74,34 @@ exports.updateCategory = async (req, res, next) => {
 
 exports.deleteCategory = async (req, res, next) => {
     try {
-        const category = await Category.findByPk(req.params.id);
+        const category = await Category.findByPk(req.params.id, {
+            include: [{ 
+                model: Subcategory, 
+                as: 'subcategories',
+                include: [{
+                    model: Question,
+                    as: 'questions'
+                }]
+            }]
+        });
         if (!category) return next(new AppError('Not found', 404));
+
+        // Cascade delete subcategories, questions and answers
+        const subcategories = category.subcategories || [];
+        for (const subcat of subcategories) {
+            const questions = subcat.questions || [];
+            const questionIds = questions.map(q => q.id);
+            if (questionIds.length > 0) {
+                await Answer.destroy({ where: { question_id: questionIds } });
+                await Question.destroy({ where: { id: questionIds } });
+            }
+        }
+        
+        const subcategoryIds = subcategories.map(s => s.id);
+        if (subcategoryIds.length > 0) {
+            await Subcategory.destroy({ where: { id: subcategoryIds } });
+        }
+
         await category.destroy();
         res.status(204).json({ status: 'success', data: null });
     } catch (err) { next(err); }
@@ -100,8 +126,19 @@ exports.updateSubcategory = async (req, res, next) => {
 
 exports.deleteSubcategory = async (req, res, next) => {
     try {
-        const sub = await Subcategory.findByPk(req.params.id);
+        const sub = await Subcategory.findByPk(req.params.id, {
+            include: [{ model: Question, as: 'questions' }]
+        });
         if (!sub) return next(new AppError('Not found', 404));
+
+        // Cascade delete questions and answers
+        const questions = sub.questions || [];
+        const questionIds = questions.map(q => q.id);
+        if (questionIds.length > 0) {
+            await Answer.destroy({ where: { question_id: questionIds } });
+            await Question.destroy({ where: { id: questionIds } });
+        }
+
         await sub.destroy();
         res.status(204).json({ status: 'success', data: null });
     } catch (err) { next(err); }
@@ -128,6 +165,10 @@ exports.deleteQuestion = async (req, res, next) => {
     try {
         const q = await Question.findByPk(req.params.id);
         if (!q) return next(new AppError('Not found', 404));
+
+        // Cascade delete answers
+        await Answer.destroy({ where: { question_id: q.id } });
+
         await q.destroy();
         res.status(204).json({ status: 'success', data: null });
     } catch (err) { next(err); }
