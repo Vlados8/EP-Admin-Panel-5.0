@@ -110,6 +110,27 @@ try {
     const supportRoutes = require('./infrastructure/routes/supportRoutes');
     const emailRoutes = require('./infrastructure/routes/emailRoutes');
 
+    // --- PUBLIC WEBHOOKS (NO AUTH) ---
+    const multer = require('multer');
+    const upload = multer({
+        storage: multer.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, path.join(__dirname, '../uploads/emails'));
+            },
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                cb(null, 'email-' + uniqueSuffix + path.extname(file.originalname));
+            }
+        })
+    });
+    
+    // Mailgun Webhook
+    app.post('/api/v1/emails/webhook', upload.any(), require('./infrastructure/controllers/EmailController').receiveWebhook);
+    
+    // CRM Integrations (e.g. MyGo)
+    app.post('/api/v1/integrations/mygo', upload.any(), require('./infrastructure/controllers/IntegrationController').handleMyGoWebhook);
+    // ---------------------------------
+
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/users', userRoutes);
     app.use('/api/v1/roles', roleRoutes);
@@ -123,24 +144,6 @@ try {
     app.use('/api/v1/project-stages', require('./infrastructure/routes/projectStageRoutes'));
     app.use('/api/v1/support', supportRoutes);
     app.use('/api/v1/emails', emailRoutes);
-
-    // Public webhook for Mailgun (no auth)
-    const multer = require('multer');
-    const upload = multer({
-        storage: multer.diskStorage({
-            destination: (req, file, cb) => {
-                cb(null, path.join(__dirname, '../uploads/emails'));
-            },
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null, 'email-' + uniqueSuffix + path.extname(file.originalname));
-            }
-        })
-    });
-    app.post('/api/v1/emails/webhook', upload.any(), require('./infrastructure/controllers/EmailController').receiveWebhook);
-    
-    // MyGo Integration Webhook (Lead + Attachments)
-    app.post('/api/v1/integrations/mygo', upload.any(), require('./infrastructure/controllers/IntegrationController').handleMyGoWebhook);
 
     // The problematic route
     const apiKeyRoutes = require(apiKeyRoutesPath);
