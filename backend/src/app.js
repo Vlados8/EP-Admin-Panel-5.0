@@ -14,7 +14,16 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Middlewares
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "img-src": ["'self'", "data:", "https://ui-avatars.com", "https://*.empire-premium.de", "https://*.railway.app"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"]
+    }
+  }
+}));
 app.use(cors({ origin: '*' }));
 
 // Healthcheck Route (Top priority for Railway)
@@ -170,7 +179,9 @@ app.use((err, req, res, next) => {
 
     res.status(err.statusCode || 500).json({
         status: 'error',
-        message: err.message || 'Internal Server Error'
+        message: err.message || 'Internal Server Error',
+        error: err,
+        stack: err.stack
     });
 });
 

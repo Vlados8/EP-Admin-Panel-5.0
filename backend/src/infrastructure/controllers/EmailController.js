@@ -425,7 +425,7 @@ exports.sendEmail = async (req, res, next) => {
             }
         }
 
-        const fromHeader = senderName ? `${senderName} <${from}>` : from;
+        const fromHeader = senderName ? `"${senderName.replace(/"/g, '')}" <${from}>` : from;
         
         let finalHtml = '';
         const inlineAttachments = [];
