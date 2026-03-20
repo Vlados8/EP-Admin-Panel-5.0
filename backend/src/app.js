@@ -110,26 +110,11 @@ try {
     const supportRoutes = require('./infrastructure/routes/supportRoutes');
     const emailRoutes = require('./infrastructure/routes/emailRoutes');
 
-    // --- PUBLIC WEBHOOKS (NO AUTH) ---
-    const multer = require('multer');
-    const upload = multer({
-        storage: multer.diskStorage({
-            destination: (req, file, cb) => {
-                cb(null, path.join(__dirname, '../uploads/emails'));
-            },
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null, 'email-' + uniqueSuffix + path.extname(file.originalname));
-            }
-        })
-    });
-    
-    // Mailgun Webhook
-    app.post('/api/v1/emails/webhook', upload.any(), require('./infrastructure/controllers/EmailController').receiveWebhook);
-    
-    // CRM Integrations (e.g. MyGo)
+    // --- PUBLIC WEBHOOKS ---
+    // CRM Integrations (e.g. MyGo) - Uses simple multer for attachments
+    const upload = require('multer')();
     app.post('/api/v1/integrations/mygo', upload.any(), require('./infrastructure/controllers/IntegrationController').handleMyGoWebhook);
-    // ---------------------------------
+    // -----------------------
 
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/users', userRoutes);

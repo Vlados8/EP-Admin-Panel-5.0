@@ -27,7 +27,10 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// All email routes are protected and restricted to Admin/Büro and Managers
+// Webhook route - MUST be before auth.protect
+router.post('/webhook', upload.any(), emailController.receiveWebhook);
+
+// All email routes below are protected and restricted to Admin/Büro and Managers
 router.use(auth.protect);
 router.use(auth.restrictTo('Admin', 'Büro', 'Projektleiter', 'Gruppenleiter'));
 
