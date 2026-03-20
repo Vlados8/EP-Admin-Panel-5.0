@@ -47,7 +47,11 @@ const Support = () => {
     const fetchTicketDetails = async (id) => {
         try {
             const response = await api.get(`/support/${id}`);
-            setTicketDetails(response.data.data.ticket);
+            const ticket = response.data.data.ticket;
+            setTicketDetails(ticket);
+            
+            // Mark as read in the main list as well (local update)
+            setTickets(prev => prev.map(t => t.id === id ? { ...t, is_read: true } : t));
         } catch (err) {
             console.error('Error fetching ticket details:', err);
         }
@@ -223,11 +227,16 @@ const Support = () => {
                                     onClick={() => setSelectedTicketId(ticket.id)}
                                     className={`p-3 rounded-xl cursor-pointer border-l-4 transition-colors ${getStatusColor(ticket.status)} ${selectedTicketId === ticket.id ? 'bg-white/10' : 'hover:bg-white/5 bg-black/20'}`}
                                 >
-                                    <div className="flex justify-between text-xs mb-1">
-                                        <span className="font-bold">#SUP-{ticket.id}</span>
-                                        <span className="text-gray-400">{new Date(ticket.createdAt).toLocaleDateString('de-DE')}</span>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-[10px] text-gray-400">#SUP-{ticket.id}</span>
+                                            {!ticket.is_read && (
+                                                <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(96,165,250,0.6)]"></div>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] text-gray-500">{new Date(ticket.createdAt).toLocaleDateString('de-DE')}</span>
                                     </div>
-                                    <h5 className="font-semibold text-sm truncate">{ticket.subject}</h5>
+                                    <h5 className={`font-semibold text-sm truncate ${!ticket.is_read ? 'text-white' : 'text-gray-400'}`}>{ticket.subject}</h5>
                                     <p className="text-xs text-gray-400 truncate">
                                         {ticket.project ? `Projekt: ${ticket.project.title}` : (ticket.client?.name || ticket.client_name) ? `Kunde: ${ticket.client?.name || ticket.client_name}` : 'Unzugewiesen'}
                                     </p>

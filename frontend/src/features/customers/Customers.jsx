@@ -185,7 +185,58 @@ const Customers = () => {
                 </div>
             </div>
 
-            <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="md:hidden space-y-4 mb-6">
+                {loading ? (
+                    <div className="text-center py-20 text-gray-400">Wird geladen...</div>
+                ) : displayedClients.length === 0 ? (
+                    <div className="text-center py-20 text-gray-500 italic bg-white/5 rounded-2xl border border-white/10">Keine Kunden gefunden.</div>
+                ) : (
+                    displayedClients.map((client) => (
+                        <div key={client.id} className="glass-card p-5 rounded-2xl border border-white/10 relative group">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-2">
+                                    {getTypeIcon(client.type)}
+                                    {getStatusBadge(client.status)}
+                                </div>
+                                {canManageCustomers && (
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleOpenModal(client)} className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400 border border-blue-500/20"><i className="fa-solid fa-pen text-xs"></i></button>
+                                        <button onClick={() => deleteClient(client.id)} className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 text-red-400 border border-red-500/20"><i className="fa-solid fa-trash-can text-xs"></i></button>
+                                    </div>
+                                )}
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-1">{client.name}</h3>
+                            {client.contact_person && (
+                                <p className="text-sm text-gray-300 mb-3 flex items-center gap-2">
+                                    <i className="fa-solid fa-user-tie text-blue-400/50"></i> {client.contact_person}
+                                </p>
+                            )}
+                            <div className="space-y-2 pt-3 border-t border-white/5">
+                                {client.email && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-envelope w-4 text-center text-blue-400/30"></i>
+                                        <span className="truncate">{client.email}</span>
+                                    </div>
+                                )}
+                                {client.phone && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-phone w-4 text-center text-blue-400/30"></i>
+                                        <span>{client.phone}</span>
+                                    </div>
+                                )}
+                                {(client.address || client.city) && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-location-dot w-4 text-center text-blue-400/30"></i>
+                                        <span className="truncate">{client.address}, {client.zip_code} {client.city}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="hidden md:block glass-card rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="bg-white/5 border-b border-white/10">
@@ -262,10 +313,9 @@ const Customers = () => {
                 </div>
             </div>
 
-            {/* Modal for Creating/Editing Client */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4 overflow-y-auto">
-                    <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-8">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex justify-center p-4">
+                    <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-auto">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
                             <h2 className="text-xl font-semibold text-white">
                                 {isEditing ? 'Kunden bearbeiten' : 'Kunden hinzufügen'}

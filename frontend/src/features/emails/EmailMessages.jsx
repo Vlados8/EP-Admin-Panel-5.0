@@ -426,19 +426,19 @@ const EmailMessages = () => {
     const renderHeader = () => {
         const currentAccount = accounts.find(acc => acc.email === accountFilter);
         return (
-            <div className="flex justify-between items-start mb-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 md:mb-10 p-2 md:p-0">
                 <div>
-                    <h1 className="text-3xl font-black text-white mb-2 tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-black text-white mb-2 tracking-tight flex flex-wrap items-baseline gap-2">
                         Nachrichten Zentrale
                         {currentAccount && (
-                             <span className="text-blue-500 ml-4 text-xl font-medium border-l border-white/20 pl-4 animate-[fadeIn_0.3s_ease-out]">
+                             <span className="text-blue-500 text-lg md:text-xl font-medium border-l border-white/20 pl-4 animate-[fadeIn_0.3s_ease-out]">
                                 {currentAccount.display_name || currentAccount.email}
                              </span>
                         )}
                     </h1>
-                    <p className="text-gray-500 max-w-lg">Verwalten Sie Ihre Kommunikation über Ihre Domain-E-Mails.</p>
+                    <p className="text-gray-500 max-w-lg text-sm md:text-base">Verwalten Sie Ihre Kommunikation über Ihre Domain-E-Mails.</p>
                 </div>
-                <button onClick={() => setView('compose')} className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 group">
+                <button onClick={() => setView('compose')} className="w-full md:w-auto px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group shrink-0">
                     <i className="fa-solid fa-paper-plane group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i> Verfassen
                 </button>
             </div>
@@ -451,7 +451,7 @@ const EmailMessages = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Sidebar Navigation */}
-                <div className="lg:col-span-3 space-y-2">
+                <div className={`lg:col-span-3 space-y-2 ${((view === 'read' && selectedMessage) || view === 'compose') ? 'hidden lg:block' : ''}`}>
                     {[
                         { id: 'inbox', label: 'Posteingang', icon: 'fa-inbox', count: true },
                         { id: 'sent', label: 'Gesendet', icon: 'fa-paper-plane' }

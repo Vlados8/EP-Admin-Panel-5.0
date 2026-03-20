@@ -160,33 +160,33 @@ const Emails = () => {
 
     return (
         <div className="animate-[fadeIn_0.4s_ease-out_forwards] p-6">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">E-Mail Management</h2>
-                    <p className="text-gray-400">Verwalten Sie Ihre Domain-E-Mails über Mailgun.</p>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+                <div className="space-y-1">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">E-Mail Management</h2>
+                    <p className="text-gray-400 text-sm md:text-base">Verwalten Sie Ihre Domain-E-Mails über Mailgun.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                    <div className="relative flex-1 sm:w-64">
+                        <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
                         <input
                             type="text"
                             placeholder="Suchen..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors w-64"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-gray-600"
                         />
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 font-bold text-sm lg:text-base whitespace-nowrap"
                     >
-                        <i className="fa-solid fa-plus font-bold"></i> Neue E-Mail Adresse
+                        <i className="fa-solid fa-plus font-bold"></i> Neue Adresse
                     </button>
                 </div>
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
                 {(() => {
                     const totalAccounts = stats?.totalAccounts || 0;
                     const activeAccounts = stats?.activeAccounts || 0;
@@ -203,12 +203,12 @@ const Emails = () => {
                         { label: 'Gesendet (24h)', value: sent24h, icon: 'fa-paper-plane', color: 'purple' },
                         { label: 'Zustellrate', value: `${deliveryRate}%`, icon: 'fa-gauge-high', color: 'orange' }
                     ].map((stat, i) => (
-                        <div key={i} className="glass-card p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
-                            <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/20 flex items-center justify-center mb-4 border border-${stat.color}-500/30`}>
-                                <i className={`fa-solid ${stat.icon} text-${stat.color}-400 text-lg`}></i>
+                        <div key={i} className="glass-card p-5 md:p-6 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition-all hover:translate-y-[-2px] duration-300 group">
+                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-${stat.color}-500/20 flex items-center justify-center mb-4 border border-${stat.color}-500/30 transition-transform group-hover:rotate-12`}>
+                                <i className={`fa-solid ${stat.icon} text-${stat.color}-400 text-lg md:text-xl`}></i>
                             </div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-semibold">{stat.label}</p>
-                            <p className="text-2xl font-bold text-white">{stat.value}</p>
+                            <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1 font-bold">{stat.label}</p>
+                            <p className="text-xl md:text-2xl font-black text-white group-hover:scale-105 origin-left transition-transform">{stat.value}</p>
                         </div>
                     ));
                 })()}

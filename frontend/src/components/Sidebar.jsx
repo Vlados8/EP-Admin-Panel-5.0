@@ -53,10 +53,9 @@ const NavGroup = ({ label, items, currentPath, search }) => {
     );
 };
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose, currentPath }) => {
     const { user } = useSelector(state => state.auth);
     const location = useLocation();
-    const currentPath = location.pathname;
     const [emailAccounts, setEmailAccounts] = useState([]);
 
     const fetchAccounts = async () => {
@@ -84,66 +83,38 @@ const Sidebar = () => {
         };
     }, []);
 
-    const mainItems = [
-        { path: '/dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
-        { path: '/notizen', icon: 'fa-note-sticky', label: 'Notizen' },
-        { path: '/aufgaben', icon: 'fa-clipboard-list', label: 'Aufgaben' },
-        { path: '/benutzer', icon: 'fa-users-gear', label: 'Benutzer' },
-        { path: '/subunternehmer', icon: 'fa-truck-fast', label: 'Subunternehmer' },
-        { path: '/kunden', icon: 'fa-users', label: 'Kunden' },
-        { path: '/projekte', icon: 'fa-building', label: 'Projekte' },
-        { path: '/kategorien', icon: 'fa-tags', label: 'Kategorien' },
-        { path: '/anfragen', icon: 'fa-inbox', label: 'Anfragen' },
-        { path: '/support', icon: 'fa-headset', label: 'Support' }
-    ];
-
-    const totalUnread = emailAccounts.reduce((sum, acc) => sum + (acc.unread_count || 0), 0);
-
-    const emailGroup = {
-        label: 'E-Mail System',
-        items: [
-            { path: '/emails', icon: 'fa-envelope-open-text', label: 'Konten' },
-            { 
-                path: '/email-messages', 
-                icon: 'fa-inbox', 
-                label: 'Alle Nachrichten',
-                badge: totalUnread > 0 ? totalUnread : null
-            },
-            ...emailAccounts.map(acc => ({
-                path: `/email-messages?account=${encodeURIComponent(acc.email)}`,
-                icon: 'fa-at',
-                label: acc.email,
-                isShort: true,
-                badge: acc.unread_count > 0 ? acc.unread_count : null
-            }))
-        ]
-    };
-
-    const apiGroup = {
-        label: 'System & API',
-        items: [
-            { path: '/settings/email-api', icon: 'fa-envelope', label: 'E-Mail API' },
-            { path: '/settings/api-keys', icon: 'fa-key', label: 'API-Schlüssel' },
-            { path: '/settings/api-integration', icon: 'fa-code', label: 'API Integration' }
-        ]
-    };
-
-    return (
-        <aside className="w-64 flex-shrink-0 border-r border-white/10 flex flex-col">
-            <div className="p-6 border-b border-white/10 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
-                    <i className="fa-solid fa-helmet-safety text-blue-400 text-xl"></i>
+    const sidebarItems = (
+        <>
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
+                        <i className="fa-solid fa-helmet-safety text-blue-400 text-xl"></i>
+                    </div>
+                    <h1 className="text-xl font-bold tracking-wider">Build<span className="text-blue-400">Admin</span></h1>
                 </div>
-                <h1 className="text-xl font-bold tracking-wider">Build<span className="text-blue-400">Admin</span></h1>
+                <button onClick={onClose} className="md:hidden text-gray-500 hover:text-white p-2">
+                    <i className="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
 
             <nav className="flex-1 overflow-y-auto py-4 flex flex-col scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {/* Main Menu - Always Visible */}
+                {/* Main Menu */}
                 <div className="px-6 py-2 text-xs font-semibold tracking-wider uppercase text-gray-500 mb-1">
                     Hauptmenü
                 </div>
                 <div className="flex flex-col gap-1 mb-4">
-                    {mainItems.map(route => (
+                    { [
+                        { path: '/dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
+                        { path: '/notizen', icon: 'fa-note-sticky', label: 'Notizen' },
+                        { path: '/aufgaben', icon: 'fa-clipboard-list', label: 'Aufgaben' },
+                        { path: '/benutzer', icon: 'fa-users-gear', label: 'Benutzer' },
+                        { path: '/subunternehmer', icon: 'fa-truck-fast', label: 'Subunternehmer' },
+                        { path: '/kunden', icon: 'fa-users', label: 'Kunden' },
+                        { path: '/projekte', icon: 'fa-building', label: 'Projekte' },
+                        { path: '/kategorien', icon: 'fa-tags', label: 'Kategorien' },
+                        { path: '/anfragen', icon: 'fa-inbox', label: 'Anfragen' },
+                        { path: '/support', icon: 'fa-headset', label: 'Support' }
+                    ].map(route => (
                         <NavItem
                             key={route.path}
                             to={route.path}
@@ -154,19 +125,37 @@ const Sidebar = () => {
                     ))}
                 </div>
 
-                {/* E-Mail System - Always Visible */}
+                {/* E-Mail System */}
                 <NavGroup 
-                    label={emailGroup.label} 
-                    items={emailGroup.items} 
+                    label="E-Mail System" 
+                    items={[
+                        { path: '/emails', icon: 'fa-envelope-open-text', label: 'Konten' },
+                        { 
+                            path: '/email-messages', 
+                            icon: 'fa-inbox', 
+                            label: 'Alle Nachrichten',
+                            badge: emailAccounts.reduce((sum, acc) => sum + (acc.unread_count || 0), 0) || null
+                        },
+                        ...emailAccounts.map(acc => ({
+                            path: `/email-messages?account=${encodeURIComponent(acc.email)}`,
+                            icon: 'fa-at',
+                            label: acc.email,
+                            badge: acc.unread_count > 0 ? acc.unread_count : null
+                        }))
+                    ]} 
                     currentPath={currentPath} 
                     search={location.search}
                 />
 
-                {/* API Settings - Collapsible - Only for Admins */}
+                {/* API Settings */}
                 {(user?.role?.name?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
                     <NavGroup 
-                        label={apiGroup.label} 
-                        items={apiGroup.items} 
+                        label="System & API" 
+                        items={[
+                            { path: '/settings/email-api', icon: 'fa-envelope', label: 'E-Mail API' },
+                            { path: '/settings/api-keys', icon: 'fa-key', label: 'API-Schlüssel' },
+                            { path: '/settings/api-integration', icon: 'fa-code', label: 'API Integration' }
+                        ]} 
                         currentPath={currentPath} 
                     />
                 )}
@@ -181,7 +170,22 @@ const Sidebar = () => {
                     </div>
                 </div>
             </div>
-        </aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* Mobile Backdrop */}
+            <div 
+                className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={onClose}
+            ></div>
+
+            {/* Sidebar Content */}
+            <aside className={`fixed md:relative inset-y-0 left-0 w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#0a0a0c] md:bg-transparent z-[70] transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+                {sidebarItems}
+            </aside>
+        </>
     );
 };
 

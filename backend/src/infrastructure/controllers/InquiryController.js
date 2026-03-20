@@ -53,6 +53,12 @@ exports.getInquiry = async (req, res, next) => {
         });
 
         if (!inquiry) return next(new AppError('Inquiry not found', 404));
+        
+        // Mark as read if not already
+        if (!inquiry.is_read) {
+            inquiry.is_read = true;
+            await inquiry.save();
+        }
 
         res.status(200).json({
             status: 'success',

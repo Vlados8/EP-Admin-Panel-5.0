@@ -64,6 +64,10 @@ const Inquiry = sequelize.define('Inquiry', {
         // IP-адрес отправителя
         type: DataTypes.STRING,
         allowNull: true
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 }, {
     tableName: 'inquiries',

@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../store/slices/authSlice';
 
-const Header = ({ title }) => {
+const Header = ({ title, onMenuClick }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
@@ -13,11 +13,19 @@ const Header = ({ title }) => {
     };
 
     return (
-        <header className="h-20 border-b border-white/10 flex items-center justify-between px-8 bg-black/20 backdrop-blur-xl">
-            <h1 className="text-2xl font-light text-white tracking-wide">{title}</h1>
+        <header className="h-20 border-b border-white/10 flex items-center justify-between px-4 md:px-8 bg-black/20 backdrop-blur-xl shrink-0">
+            <div className="flex items-center gap-4">
+                <button 
+                    onClick={onMenuClick}
+                    className="md:hidden w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                >
+                    <i className="fa-solid fa-bars"></i>
+                </button>
+                <h1 className="text-xl md:text-2xl font-light text-white tracking-wide truncate max-w-[150px] md:max-w-none">{title}</h1>
+            </div>
 
             <div className="flex items-center gap-6">
-                <div className="relative">
+                <div className="hidden md:relative">
                     <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input
                         type="text"

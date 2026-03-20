@@ -17,7 +17,9 @@ const InquiryDetailsModal = ({ inquiry, isOpen, onClose, onProjectCreate, onInqu
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
-        if (isOpen) {
+        let isCancelled = false;
+        
+        if (isOpen && inquiry?.id) {
             setFormData({
                 contact_name: inquiry?.contact_name || '',
                 contact_email: inquiry?.contact_email || '',
@@ -28,8 +30,25 @@ const InquiryDetailsModal = ({ inquiry, isOpen, onClose, onProjectCreate, onInqu
                 subcategory_id: inquiry?.subcategory_id || ''
             });
             fetchCategories();
+
+            // Only fetch if it's actually unread to prevent loops
+            if (!inquiry.is_read) {
+                api.get(`/inquiries/${inquiry.id}`).then(res => {
+                    if (isCancelled) return;
+                    const updatedInquiry = res.data.data.inquiry;
+                    if (onInquiryUpdated) {
+                        onInquiryUpdated(updatedInquiry);
+                    }
+                }).catch(err => {
+                    console.error('Error marking inquiry as read:', err);
+                });
+            }
         }
-    }, [isOpen, inquiry]);
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isOpen, inquiry?.id, onInquiryUpdated, inquiry?.is_read]);
 
     const fetchCategories = async () => {
         try {
@@ -81,8 +100,8 @@ const InquiryDetailsModal = ({ inquiry, isOpen, onClose, onProjectCreate, onInqu
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col my-auto max-h-none md:max-h-[90vh]">
 
                 {/* Header */}
                 <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">

@@ -55,6 +55,10 @@ const SupportTicket = sequelize.define('SupportTicket', {
         // Источник: с какого сайта (домена) был отправлен тикет
         type: DataTypes.STRING,
         allowNull: true
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 }, {
     tableName: 'support_tickets',

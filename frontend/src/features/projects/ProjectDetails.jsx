@@ -213,7 +213,7 @@ const ProjectDetails = () => {
     return (
         <div className="animate-[fadeIn_0.3s_ease-out_forwards] flex-1 flex flex-col">
             {/* Header Navigation */}
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/projekte')}
@@ -250,7 +250,7 @@ const ProjectDetails = () => {
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex items-center gap-2 mb-6 border-b border-white/10">
+            <div className="flex items-center gap-1 mb-8 border-b border-white/10 overflow-x-auto whitespace-nowrap scrollbar-hide -mx-4 px-4">
                 <button
                     onClick={() => setActiveTab('info')}
                     className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'info' ? 'text-blue-400' : 'text-gray-400 hover:text-gray-200'}`}
@@ -568,17 +568,17 @@ const ProjectDetails = () => {
             {activeTab === 'steps' && (
                 <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
                     <div className="glass-card rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <h3 className="text-lg font-semibold text-white">Bauschritte & Etappen</h3>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                                 <button
                                     onClick={() => setIsAddingTask(!isAddingTask)}
-                                    className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-600/30 transition-all flex items-center gap-2"
+                                    className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2"
                                 >
                                     <i className={`fa-solid ${isAddingTask ? 'fa-xmark' : 'fa-plus'}`}></i>
                                     {isAddingTask ? 'Abbrechen' : 'Etappe hinzufügen'}
                                 </button>
-                                <div className="text-xs text-gray-400 flex items-center gap-4">
+                                <div className="text-[10px] md:text-xs text-gray-400 flex items-center justify-around sm:justify-start gap-4 bg-white/5 p-2 sm:p-0 rounded-lg sm:bg-transparent">
                                     <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-400"></div> Erledigt</div>
                                     <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400"></div> In Arbeit</div>
                                 </div>
@@ -587,19 +587,19 @@ const ProjectDetails = () => {
 
                         {/* Add Task Form */}
                         {isAddingTask && (
-                            <div className="mb-6 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 animate-[slideDown_0.3s_ease-out] space-y-4">
-                                <div className="flex gap-4">
+                            <div className="mb-6 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 md:p-6 animate-[slideDown_0.3s_ease-out] space-y-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
                                     <input
                                         type="text"
                                         value={newTaskTitle}
                                         onChange={e => setNewTaskTitle(e.target.value)}
                                         placeholder="Etappenname (z.B. Fundament gießen)"
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
                                         onKeyDown={e => e.key === 'Enter' && handleAddTask()}
                                     />
                                     <button
                                         onClick={handleAddTask}
-                                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-sm font-medium transition-all"
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20"
                                     >
                                         Erstellen
                                     </button>
@@ -609,27 +609,27 @@ const ProjectDetails = () => {
                                     value={newTaskDescription}
                                     onChange={e => setNewTaskDescription(e.target.value)}
                                     placeholder="Beschreibung der Etappe (optional)"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
-                                    rows="2"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                                    rows="3"
                                 />
 
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-xs text-gray-400">Fotos hinzufügen:</label>
-                                    <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-col gap-3">
+                                    <label className="text-[10px] text-gray-500 uppercase tracking-widest font-bold px-1">Fotos hinzufügen</label>
+                                    <div className="flex flex-wrap gap-3">
                                         {selectedFiles.map((file, i) => (
-                                            <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10">
+                                            <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 shadow-lg">
                                                 <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
                                                 <button
                                                     onClick={() => setSelectedFiles(selectedFiles.filter((_, idx) => idx !== i))}
-                                                    className="absolute top-0.5 right-0.5 bg-black/60 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px]"
+                                                    className="absolute top-1 right-1 bg-black/60 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] hover:bg-red-500 transition-colors"
                                                 >
                                                     <i className="fa-solid fa-xmark"></i>
                                                 </button>
                                             </div>
                                         ))}
-                                        <label className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500/50 hover:text-blue-400 cursor-pointer transition-all">
-                                            <i className="fa-solid fa-camera text-sm"></i>
-                                            <span className="text-[8px] mt-1">Upload</span>
+                                        <label className="w-20 h-20 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500/50 hover:text-blue-400 cursor-pointer transition-all bg-white/5">
+                                            <i className="fa-solid fa-camera text-lg"></i>
+                                            <span className="text-[10px] mt-1 font-bold">Upload</span>
                                             <input
                                                 type="file"
                                                 multiple
@@ -647,15 +647,27 @@ const ProjectDetails = () => {
                                 [...project.stages].sort((a, b) => a.id - b.id).map((task, idx) => (
                                     <div
                                         key={task.id}
-                                        className={`p-4 rounded-xl border transition-all flex items-center gap-4 group ${task.status === 'Erledigt' ? 'bg-emerald-500/5 border-emerald-500/20 opacity-70' : 'bg-white/5 border-white/10 hover:bg-white/[0.07]'}`}
+                                        className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row items-stretch sm:items-center gap-4 group ${task.status === 'Erledigt' ? 'bg-emerald-500/5 border-emerald-500/20 opacity-70' : 'bg-white/5 border-white/10 hover:bg-white/[0.07]'}`}
                                     >
-                                        <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-gray-500 font-bold border border-white/5 group-hover:border-blue-500/30 transition-colors">
-                                            {idx + 1}
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-gray-500 font-bold border border-white/5 group-hover:border-blue-500/30 transition-colors shrink-0">
+                                                {idx + 1}
+                                            </div>
+                                            {/* Mobile Actions: Show always or on group hover */}
+                                            <div className="flex sm:hidden items-center gap-4 ml-auto">
+                                                <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors p-2">
+                                                    <i className="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors p-2">
+                                                    <i className="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
+
+                                        <div className="flex-1 min-w-0">
                                             {editingTaskId === task.id ? (
                                                 <div className="flex flex-col gap-4 w-full bg-blue-500/5 p-4 rounded-xl border border-blue-500/20">
-                                                    <div className="flex gap-4">
+                                                    <div className="flex flex-col sm:flex-row gap-4">
                                                         <input
                                                             type="text"
                                                             value={editTaskTitle}
@@ -665,10 +677,10 @@ const ProjectDetails = () => {
                                                             placeholder="Titel"
                                                         />
                                                         <div className="flex gap-2">
-                                                            <button onClick={() => handleSaveTaskEdit(task.id)} className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center transition-all border border-emerald-500/30">
+                                                            <button onClick={() => handleSaveTaskEdit(task.id)} className="flex-1 sm:w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center transition-all border border-emerald-500/30">
                                                                 <i className="fa-solid fa-check"></i>
                                                             </button>
-                                                            <button onClick={() => setEditingTaskId(null)} className="w-10 h-10 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center transition-all border border-red-500/30">
+                                                            <button onClick={() => setEditingTaskId(null)} className="flex-1 sm:w-10 h-10 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center transition-all border border-red-500/30">
                                                                 <i className="fa-solid fa-xmark"></i>
                                                             </button>
                                                         </div>
@@ -736,17 +748,17 @@ const ProjectDetails = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <div className={`font-medium ${task.status === 'Erledigt' ? 'text-gray-400 line-through' : 'text-white'}`}>{task.title}</div>
+                                                <div className="space-y-2">
+                                                    <div className={`font-bold text-base ${task.status === 'Erledigt' ? 'text-gray-400 line-through' : 'text-white'}`}>{task.title}</div>
 
-                                                    <div className="flex items-center gap-3 mt-1">
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                                                         {task.creator && (
-                                                            <div className="text-[12px] text-blue-300 font-bold flex items-center gap-1.5 drop-shadow-sm">
+                                                            <div className="text-[11px] md:text-[12px] text-blue-400 font-bold flex items-center gap-1.5">
                                                                 <i className="fa-solid fa-user text-[10px]"></i>
                                                                 {task.creator.name}
                                                             </div>
                                                         )}
-                                                        <div className="text-[12px] text-slate-50 flex items-center gap-1.5 font-bold drop-shadow-sm">
+                                                        <div className="text-[11px] md:text-[12px] text-gray-400 flex items-center gap-1.5">
                                                             <i className="fa-solid fa-clock text-[10px]"></i>
                                                             {new Date(task.createdAt).toLocaleString('de-DE', {
                                                                 day: '2-digit',
@@ -758,11 +770,17 @@ const ProjectDetails = () => {
                                                         </div>
                                                     </div>
 
+                                                    {task.description && (
+                                                        <div className="text-sm text-gray-300 font-medium leading-relaxed bg-white/5 p-3 rounded-xl border border-white/5 italic">
+                                                            {task.description}
+                                                        </div>
+                                                    )}
+
                                                     {/* Task Images */}
                                                     {task.images?.length > 0 && (
-                                                        <div className="flex gap-2 mt-2">
+                                                        <div className="flex flex-wrap gap-2 pt-1">
                                                             {task.images.map(img => (
-                                                                <div key={img.id} className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 cursor-pointer hover:border-blue-500/50 transition-all">
+                                                                <div key={img.id} className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 cursor-pointer hover:border-blue-500/50 transition-all shadow-lg">
                                                                     <img
                                                                         src={`http://localhost:3000${img.path}`}
                                                                         alt=""
@@ -773,32 +791,28 @@ const ProjectDetails = () => {
                                                             ))}
                                                         </div>
                                                     )}
-
-                                                    {task.description && (
-                                                        <div className="text-sm text-white font-medium leading-relaxed mt-2 px-1">
-                                                            {task.description}
-                                                        </div>
-                                                    )}
-                                                </>
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors">
-                                                <i className="fa-solid fa-pen-to-square"></i>
-                                            </button>
-                                            <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors">
-                                                <i className="fa-solid fa-trash"></i>
+                                        <div className="flex items-center justify-between sm:justify-end gap-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5 mt-2 sm:mt-0">
+                                            {/* Desktop Actions: Hidden on mobile, show on group hover */}
+                                            <div className="hidden sm:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors">
+                                                    <i className="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors">
+                                                    <i className="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                onClick={() => toggleTaskStatus(task)}
+                                                className={`w-14 h-7 rounded-full relative transition-all duration-300 ${task.status === 'Erledigt' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-white/10'}`}
+                                            >
+                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ease-spring ${task.status === 'Erledigt' ? 'left-8' : 'left-1'}`}></div>
                                             </button>
                                         </div>
-
-                                        <button
-                                            onClick={() => toggleTaskStatus(task)}
-                                            className={`w-12 h-6 rounded-full relative transition-colors ${task.status === 'Erledigt' ? 'bg-emerald-500' : 'bg-white/10'}`}
-                                        >
-                                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${task.status === 'Erledigt' ? 'left-7' : 'left-1'}`}></div>
-                                        </button>
                                     </div>
                                 ))
                             ) : (
@@ -816,12 +830,12 @@ const ProjectDetails = () => {
                         </div>
                     </div>
 
-                    <div className="glass-card rounded-2xl p-6 bg-purple-500/5 border-purple-500/10">
-                        <h4 className="text-sm font-semibold text-purple-400 mb-2 uppercase tracking-wider flex items-center gap-2">
-                            <i className="fa-solid fa-circle-info"></i> Info
+                    <div className="glass-card rounded-2xl p-6 bg-purple-500/5 border border-purple-500/10 shadow-inner mt-6">
+                        <h4 className="text-xs font-bold text-purple-400 mb-3 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <i className="fa-solid fa-circle-info text-sm"></i> Hinweis
                         </h4>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Mitarbeiter können Etappen im Bereich "Meine Aufgaben" oder direkt hier im Projekt schließen. Jedes Schließen einer Etappe wird im System protokolliert.
+                        <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                            Mitarbeiter können Etappen im Bereich <span className="text-gray-300">"Meine Aufgaben"</span> oder direkt hier im Projekt schließen. Jedes Schließen einer Etappe wird im System protokolliert.
                         </p>
                     </div>
                 </div>

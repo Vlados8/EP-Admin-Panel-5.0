@@ -176,30 +176,30 @@ const Users = () => {
 
     return (
         <div className="animate-[fadeIn_0.4s_ease-out_forwards]">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
                     <h2 className="text-xl font-semibold mb-1">Benutzerverwaltung</h2>
-                    <p className="text-gray-400 text-sm">
+                    <p className="hidden md:block text-gray-400 text-sm">
                         Hierarchie: Worker <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Gruppenleiter
                         <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Projektleiter
                         <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Büro / Admin
                     </p>
                 </div>
-                <div className="flex gap-4">
-                    <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <div className="relative flex-grow">
                         <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
                         <input
                             type="text"
                             placeholder="Benutzer suchen..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-black/20 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors w-64 shadow-[0_4px_15px_rgba(0,0,0,0.1)]"
+                            className="bg-black/20 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors w-full md:w-64 shadow-[0_4px_15px_rgba(0,0,0,0.1)]"
                         />
                     </div>
                     {canManageUsers && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm transition-colors shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm transition-colors shadow-[0_0_15px_rgba(59,130,246,0.5)] whitespace-nowrap"
                         >
                             <i className="fa-solid fa-user-plus mr-2"></i>Benutzer anlegen
                         </button>
@@ -207,21 +207,83 @@ const Users = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-6">
                 <div
                     onClick={() => handleFilter('Alle')}
-                    className={`glass-card p-2 rounded-lg text-sm text-center cursor-pointer transition-colors ${filterRole === 'Alle' ? 'bg-white/20 border-blue-400/50 border' : 'hover:bg-white/20'}`}
+                    className={`glass-card py-2 rounded-lg text-xs text-center cursor-pointer transition-colors ${filterRole === 'Alle' ? 'bg-white/20 border-blue-400/50 border' : 'hover:bg-white/20'}`}
                 >Alle</div>
                 {['Admin', 'Büro', 'Projektleiter', 'Gruppenleiter', 'Worker'].map(role => (
                     <div
                         key={role}
                         onClick={() => handleFilter(role)}
-                        className={`glass-card p-2 rounded-lg text-sm text-center cursor-pointer transition-colors ${filterRole === role ? 'bg-white/20 border-blue-400/50 border' : 'hover:bg-white/20'}`}
+                        className={`glass-card py-2 rounded-lg text-xs text-center cursor-pointer transition-colors ${filterRole === role ? 'bg-white/20 border-blue-400/50 border' : 'hover:bg-white/20'}`}
                     >{role}</div>
                 ))}
             </div>
 
-            <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="md:hidden space-y-4 mb-6">
+                {isLoading ? (
+                    <div className="text-center py-20 text-gray-400">Lädt...</div>
+                ) : filteredUsers.length === 0 ? (
+                    <div className="text-center py-20 text-gray-400 bg-white/5 rounded-2xl border border-white/10 italic text-sm">Keine Benutzer gefunden.</div>
+                ) : (
+                    filteredUsers.map(user => (
+                        <div key={user.id} className="glass-card p-5 rounded-2xl border border-white/10 relative">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-600/50 to-purple-600/50 p-[2px] flex-shrink-0">
+                                    <div className="w-full h-full rounded-full border border-white/10 flex items-center justify-center text-sm font-bold text-white bg-[#1a1a1a]">
+                                        {getInitials(user.name)}
+                                    </div>
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                    <h3 className="text-white font-bold truncate">{user.name}</h3>
+                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border mt-0.5 ${user.role?.name === 'Admin' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                                        user.role?.name === 'Büro' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                                            user.role?.name === 'Projektleiter' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
+                                                user.role?.name === 'Gruppenleiter' ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                                                    'bg-gray-500/20 text-gray-300 border-gray-500/30'
+                                        }`}>
+                                        {user.role?.name || 'Gast'}
+                                    </span>
+                                </div>
+                                {canManageUsers && (
+                                    <div className="flex gap-1">
+                                        <button onClick={() => handleEditClick(user)} className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400 border border-blue-500/20"><i className="fa-solid fa-pen text-xs"></i></button>
+                                        <button onClick={() => handleDeleteUser(user.id)} className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 text-red-400 border border-red-500/20"><i className="fa-solid fa-trash text-xs"></i></button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-2.5 pt-3 border-t border-white/5">
+                                <div className="flex items-center gap-3 text-xs text-gray-400">
+                                    <i className="fa-regular fa-envelope w-4 text-center text-blue-400/30"></i>
+                                    <span className="truncate">{user.email}</span>
+                                </div>
+                                {user.phone && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-phone w-4 text-center text-blue-400/30"></i>
+                                        <span>{user.phone}</span>
+                                    </div>
+                                )}
+                                {user.manager && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-sitemap w-4 text-center text-orange-400/30"></i>
+                                        <span className="text-gray-300">Vorgesetzter: {user.manager.name}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-3 text-xs">
+                                    <i className="fa-solid fa-circle-check w-4 text-center text-green-400/30"></i>
+                                    <span className={user.status === 'active' ? 'text-green-400' : 'text-red-400'}>
+                                        Status: {user.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="hidden md:block glass-card rounded-2xl overflow-hidden">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white/5 border-b border-white/10">
                         <tr>
@@ -310,10 +372,9 @@ const Users = () => {
                 </table>
             </div>
 
-            {/* Add User Modal */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4">
-                    <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out]">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex justify-center p-4">
+                    <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-auto">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
                             <h2 className="text-xl font-semibold text-white flex items-center gap-3">
                                 <i className="fa-solid fa-user-plus text-blue-400"></i> Neuer Mitarbeiter
@@ -462,10 +523,9 @@ const Users = () => {
                 </div>
             )}
 
-            {/* Edit User Modal */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4">
-                    <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out]">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex justify-center p-4">
+                    <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-auto">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
                             <h2 className="text-xl font-semibold text-white flex items-center gap-3">
                                 <i className="fa-solid fa-user-pen text-blue-400"></i> Mitarbeiter bearbeiten

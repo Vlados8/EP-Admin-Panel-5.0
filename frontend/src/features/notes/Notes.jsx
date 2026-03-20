@@ -122,13 +122,14 @@ const Notes = () => {
 
     return (
         <div className="animate-[fadeIn_0.4s_ease-out_forwards]">
-            <div className="flex justify-between items-center mb-6">
-                <p className="text-gray-300">Notizen im Kalender verwalten und planen.</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <p className="text-gray-400 text-sm md:text-base">Notizen im Kalender verwalten und planen.</p>
                 <button
                     onClick={() => { resetForm(); setFormData(prev => ({ ...prev, date: new Date().toISOString().split('T')[0] })); setIsModalOpen(true); }}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 group hover:scale-[1.02] active:scale-[0.98]"
                 >
-                    <i className="fa-solid fa-plus mr-2"></i>Neue Notiz
+                    <i className="fa-solid fa-plus transition-transform group-hover:rotate-90"></i>
+                    Neue Notiz
                 </button>
             </div>
 

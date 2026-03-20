@@ -12,11 +12,6 @@ async function syncDb() {
         console.log('[Migration] Checking environment...');
         console.log(`[Migration] Node Env: ${process.env.NODE_ENV || 'development'}`);
         
-        if (!process.env.DATABASE_URL && !process.env.MYSQL_URL) {
-            console.error('[Migration] ERROR: No DATABASE_URL or MYSQL_URL found in environment variables.');
-            process.exit(1);
-        }
-
         console.log('[Migration] Starting safe schema synchronization (alter: true)...');
         
         // This will:

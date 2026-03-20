@@ -193,8 +193,15 @@ const Inquiries = () => {
             onClick={() => setSelectedInquiry(inquiry)}
         >
             <div className="flex justify-between items-start mb-2">
-                <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 truncate max-w-[150px]">
-                    {inquiry.category?.name || 'Allgemein'}
+                <div className="flex items-center gap-2">
+                    <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 truncate max-w-[150px]">
+                        {inquiry.category?.name || 'Allgemein'}
+                    </div>
+                    {!inquiry.is_read && (
+                        <div className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white animate-pulse">
+                            NEU
+                        </div>
+                    )}
                 </div>
                 {canManageInquiries && (
                     <button onClick={(e) => { e.stopPropagation(); deleteInquiry(inquiry.id); }} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1">
@@ -257,96 +264,117 @@ const Inquiries = () => {
             {loading ? (
                 <div className="flex-1 flex items-center justify-center text-gray-400">Lade Anfragen...</div>
             ) : (
-                <div className="glass-card rounded-2xl overflow-hidden mt-2">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-white/5 border-b border-white/10">
-                                <tr>
-                                    <th className="p-4">Anfrage / Details</th>
-                                    <th className="p-4">Kategorie</th>
-                                    <th className="p-4">Kontakt / Kunde</th>
-                                    <th className="p-4">Status</th>
-                                    <th className="p-4 text-right">Aktionen</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {filteredInquiries.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="p-8 text-center text-gray-400 bg-white/5">Keine Anfragen gefunden.</td>
-                                    </tr>
-                                ) : (
-                                    filteredInquiries.map(inq => (
-                                        <tr key={inq.id} className="hover:bg-white/5 transition-colors">
-                                            {/* Column 1: Title & Details */}
-                                            <td className="p-4 align-top max-w-[300px]">
-                                                <div className="font-semibold text-white text-base">{inq.title}</div>
-                                                {inq.notes && <div className="text-xs text-gray-400 mt-1 line-clamp-2">{inq.notes}</div>}
-                                                {inq.answers && inq.answers.length > 0 && (
-                                                    <div className="text-xs text-gray-500 mt-1.5 space-y-0.5">
-                                                        {inq.answers.slice(0, 3).map((ans, i) => (
-                                                            <div key={ans.id} className="truncate">
-                                                                <span className="text-gray-400">{ans.question?.question_text}:</span> {ans.answer_value || ans.answer?.answer_text}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {/* Column 2: Category */}
-                                            <td className="p-4 align-top">
-                                                <div className="text-gray-300 text-sm">
-                                                    {inq.category?.name || '-'}
-                                                </div>
-                                            </td>
-
-                                            {/* Column 3: Contact */}
-                                            <td className="p-4 align-top">
-                                                <div className="text-sm">
-                                                    <div className="text-gray-300 font-medium">{inq.contact_name}</div>
-                                                    <div className="text-gray-500 text-xs mt-0.5 break-all max-w-[200px]">{inq.contact_email || inq.contact_phone}</div>
-                                                </div>
-                                            </td>
-
-                                            {/* Column 4: Status */}
-                                            <td className="p-4 align-top">
-                                                <select
-                                                    value={inq.status}
-                                                    onChange={e => handleStatusChange(inq.id, e.target.value)}
-                                                    className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer w-full max-w-[150px] appearance-none"
-                                                >
-                                                    {COLUMNS.map(c => <option key={c.id} value={c.id} className="bg-gray-900">{c.title}</option>)}
-                                                </select>
-                                                <div className="text-xs text-gray-600 mt-2">{new Date(inq.createdAt).toLocaleDateString('de-DE')}</div>
-                                            </td>
-
-                                            {/* Column 5: Actions */}
-                                            <td className="p-4 align-top hidden md:table-cell w-[100px]">
-                                                <div className="flex items-center justify-end gap-3">
-                                                    <button
-                                                        onClick={() => setSelectedInquiry(inq)}
-                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
-                                                        title="Details anzeigen"
-                                                    >
-                                                        <i className="fa-solid fa-eye"></i>
-                                                    </button>
-                                                    {canManageInquiries && (
-                                                        <button
-                                                            onClick={() => deleteInquiry(inq.id)}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                                                            title="Anfrage löschen"
-                                                        >
-                                                            <i className="fa-solid fa-trash-can"></i>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                <>
+                    {/* Mobile Card List */}
+                    <div className="md:hidden space-y-4 overflow-y-auto flex-1 mt-2 pb-20">
+                        {filteredInquiries.length === 0 ? (
+                            <div className="text-center py-20 text-gray-500 italic bg-white/5 rounded-2xl border border-white/10">Keine Anfragen gefunden.</div>
+                        ) : (
+                            filteredInquiries.map(inq => (
+                                <InquiryCard key={inq.id} inquiry={inq} />
+                            ))
+                        )}
                     </div>
-                </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block glass-card rounded-2xl overflow-hidden mt-2">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm whitespace-nowrap">
+                                <thead className="bg-white/5 border-b border-white/10">
+                                    <tr>
+                                        <th className="p-4">Anfrage / Details</th>
+                                        <th className="p-4">Kategorie</th>
+                                        <th className="p-4">Kontakt / Kunde</th>
+                                        <th className="p-4">Status</th>
+                                        <th className="p-4 text-right">Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {filteredInquiries.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="p-8 text-center text-gray-400 bg-white/5">Keine Anfragen gefunden.</td>
+                                        </tr>
+                                    ) : (
+                                        filteredInquiries.map(inq => (
+                                            <tr key={inq.id} className="hover:bg-white/5 transition-colors">
+                                                {/* Column 1: Title & Details */}
+                                                <td className="p-4 align-top max-w-[300px]">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="font-semibold text-white text-base">{inq.title}</div>
+                                                        {!inq.is_read && (
+                                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)] animate-pulse uppercase">
+                                                                Neu
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {inq.notes && <div className="text-xs text-gray-400 mt-1 line-clamp-2">{inq.notes}</div>}
+                                                    {inq.answers && inq.answers.length > 0 && (
+                                                        <div className="text-xs text-gray-500 mt-1.5 space-y-0.5">
+                                                            {inq.answers.slice(0, 3).map((ans, i) => (
+                                                                <div key={ans.id} className="truncate">
+                                                                    <span className="text-gray-400">{ans.question?.question_text}:</span> {ans.answer_value || ans.answer?.answer_text}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Column 2: Category */}
+                                                <td className="p-4 align-top">
+                                                    <div className="text-gray-300 text-sm">
+                                                        {inq.category?.name || '-'}
+                                                    </div>
+                                                </td>
+
+                                                {/* Column 3: Contact */}
+                                                <td className="p-4 align-top">
+                                                    <div className="text-sm">
+                                                        <div className="text-gray-300 font-medium">{inq.contact_name}</div>
+                                                        <div className="text-gray-500 text-xs mt-0.5 break-all max-w-[200px]">{inq.contact_email || inq.contact_phone}</div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Column 4: Status */}
+                                                <td className="p-4 align-top">
+                                                    <select
+                                                        value={inq.status}
+                                                        onChange={e => handleStatusChange(inq.id, e.target.value)}
+                                                        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer w-full max-w-[150px] appearance-none"
+                                                    >
+                                                        {COLUMNS.map(c => <option key={c.id} value={c.id} className="bg-gray-900">{c.title}</option>)}
+                                                    </select>
+                                                    <div className="text-xs text-gray-600 mt-2">{new Date(inq.createdAt).toLocaleDateString('de-DE')}</div>
+                                                </td>
+
+                                                {/* Column 5: Actions */}
+                                                <td className="p-4 align-top hidden md:table-cell w-[100px]">
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <button
+                                                            onClick={() => setSelectedInquiry(inq)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                                                            title="Details anzeigen"
+                                                        >
+                                                            <i className="fa-solid fa-eye"></i>
+                                                        </button>
+                                                        {canManageInquiries && (
+                                                            <button
+                                                                onClick={() => deleteInquiry(inq.id)}
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                                                title="Anfrage löschen"
+                                                            >
+                                                                <i className="fa-solid fa-trash-can"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* FULLSCREEN FUNNEL WIZARD */}
@@ -640,7 +668,13 @@ const Inquiries = () => {
             <InquiryDetailsModal
                 inquiry={selectedInquiry}
                 isOpen={!!selectedInquiry}
-                onClose={() => setSelectedInquiry(null)}
+                onClose={() => {
+                    // Update local state is_read when closing, so list reflects it
+                    if (selectedInquiry && !selectedInquiry.is_read) {
+                        setInquiries(prev => prev.map(inq => inq.id === selectedInquiry.id ? { ...inq, is_read: true } : inq));
+                    }
+                    setSelectedInquiry(null);
+                }}
                 onProjectCreate={(inq) => {
                     setProjectWizardData(inq);
                     setIsProjectWizardOpen(true);

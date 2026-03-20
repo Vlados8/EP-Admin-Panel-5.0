@@ -50,6 +50,12 @@ exports.getTicketDetails = async (req, res, next) => {
             return res.status(404).json({ status: 'fail', message: 'Ticket not found' });
         }
 
+        // Mark as read if not already
+        if (!ticket.is_read) {
+            ticket.is_read = true;
+            await ticket.save();
+        }
+
         res.status(200).json({
             status: 'success',
             data: { ticket }

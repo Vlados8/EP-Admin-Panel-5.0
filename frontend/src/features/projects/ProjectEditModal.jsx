@@ -217,8 +217,8 @@ const ProjectEditModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md px-4">
-            <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/60 backdrop-blur-md flex justify-center p-4">
+            <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] overflow-hidden flex flex-col my-auto max-h-none md:max-h-[90vh]">
                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                     <h2 className="text-xl font-semibold text-white flex items-center gap-3">
                         <i className="fa-solid fa-pen-to-square text-blue-400"></i> Projekt bearbeiten

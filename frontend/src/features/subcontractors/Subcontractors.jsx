@@ -147,7 +147,66 @@ const Subcontractors = () => {
                 </div>
             </div>
 
-            <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="md:hidden space-y-4 mb-6">
+                {loading ? (
+                    <div className="text-center py-20 text-gray-400">Wird geladen...</div>
+                ) : displayedSubcs.length === 0 ? (
+                    <div className="text-center py-20 text-gray-500 italic bg-white/5 rounded-2xl border border-white/10">Keine Subunternehmer gefunden.</div>
+                ) : (
+                    displayedSubcs.map((sub) => (
+                        <div key={sub.id} className="glass-card p-5 rounded-2xl border border-white/10 relative group">
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-500/30 uppercase tracking-wider">
+                                    {sub.trade}
+                                </span>
+                                <div className="flex gap-2">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 ${sub.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                        <span className={`w-1 h-1 rounded-full ${sub.status === 'active' ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                                        {sub.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                                    </span>
+                                    {canManageSubcontractors && (
+                                        <div className="flex gap-2 ml-2">
+                                            <button onClick={() => handleOpenModal(sub)} className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 text-gray-400 border border-white/10"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-1">{sub.name}</h3>
+                            {sub.contact_person && (
+                                <p className="text-sm text-gray-400 mb-4">{sub.contact_person}</p>
+                            )}
+                            <div className="grid grid-cols-1 gap-2 pt-3 border-t border-white/5">
+                                {sub.email && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-envelope w-4 text-center text-blue-400/30"></i>
+                                        <span className="truncate">{sub.email}</span>
+                                    </div>
+                                )}
+                                {sub.phone && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-phone w-4 text-center text-blue-400/30"></i>
+                                        <span>{sub.phone}</span>
+                                    </div>
+                                )}
+                                {(sub.city || sub.zip_code) && (
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <i className="fa-solid fa-location-dot w-4 text-center text-blue-400/30"></i>
+                                        <span className="truncate">{sub.zip_code} {sub.city}</span>
+                                    </div>
+                                )}
+                                {sub.hourly_rate && (
+                                    <div className="flex items-center gap-3 text-xs text-blue-400 font-semibold mt-1">
+                                        <i className="fa-solid fa-euro-sign w-4 text-center text-blue-400/30"></i>
+                                        <span>{sub.hourly_rate} € / Std.</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="hidden md:block glass-card rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="bg-white/5 border-b border-white/10">
@@ -227,10 +286,9 @@ const Subcontractors = () => {
                 </div>
             </div>
 
-            {/* Modal for Creating Subcontractor based on User Design */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4 overflow-y-auto">
-                    <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-8">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md flex justify-center p-4">
+                    <div className="glass-card w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-auto">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
                             <h2 className="text-xl font-semibold text-white">
                                 {isEditing ? 'Subunternehmer bearbeiten' : 'Subunternehmer hinzufügen'}
