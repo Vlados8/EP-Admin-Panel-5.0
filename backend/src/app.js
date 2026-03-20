@@ -280,6 +280,20 @@ if (require.main === module) {
                         await sequelize.query("ALTER TABLE attachments MODIFY COLUMN email_id CHAR(36) NULL");
                     }
 
+                    console.log('Verifying inquiries schema...');
+                    const [inquiryReadResults] = await sequelize.query("SHOW COLUMNS FROM inquiries LIKE 'is_read'");
+                    if (inquiryReadResults.length === 0) {
+                        console.log('Adding missing is_read column to inquiries...');
+                        await sequelize.query("ALTER TABLE inquiries ADD COLUMN is_read BOOLEAN DEFAULT 0 AFTER notes");
+                    }
+
+                    console.log('Verifying support_tickets schema...');
+                    const [supportReadResults] = await sequelize.query("SHOW COLUMNS FROM support_tickets LIKE 'is_read'");
+                    if (supportReadResults.length === 0) {
+                        console.log('Adding missing is_read column to support_tickets...');
+                        await sequelize.query("ALTER TABLE support_tickets ADD COLUMN is_read BOOLEAN DEFAULT 0 AFTER source_website");
+                    }
+
                     console.log('Schema verification complete.');
                 } catch (schemaErr) {
                     console.warn('Non-critical: Schema fix failed (columns might already exist):', schemaErr.message);
