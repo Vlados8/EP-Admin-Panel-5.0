@@ -19,9 +19,21 @@ import Emails from './features/emails/Emails';
 import EmailMessages from './features/emails/EmailMessages';
 import EmailApi from './features/emails/EmailApi';
 
+import { useEffect } from 'react';
+import socketService from './services/socket';
+
 // Protect Routes with actual auth state
 const RequireAuth = ({ children }) => {
-    const { isAuthenticated } = useSelector((state) => state.auth);
+    const { isAuthenticated, user } = useSelector((state) => state.auth);
+
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            socketService.connect(user.company_id, user.id);
+        } else {
+            socketService.disconnect();
+        }
+        return () => socketService.disconnect();
+    }, [isAuthenticated, user]);
 
     if (!isAuthenticated) return <Navigate to="/login" replace />;
     return children;

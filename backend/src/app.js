@@ -261,6 +261,12 @@ if (require.main === module) {
                         await sequelize.query("ALTER TABLE emails ADD COLUMN recipient_name VARCHAR(255) NULL AFTER recipient");
                     }
 
+                    const [clientIdResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'client_id'");
+                    if (clientIdResults.length === 0) {
+                        console.log('Adding missing client_id column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN client_id INT NULL AFTER recipient_email, ADD CONSTRAINT fk_emails_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL");
+                    }
+
                     const [inquiryIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'inquiry_id'");
                     if (inquiryIdResults.length === 0) {
                         console.log('Adding missing inquiry_id column to attachments...');

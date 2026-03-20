@@ -40,6 +40,14 @@ const Email = sequelize.define('Email', {
         allowNull: true,
         comment: 'Clean email address extracted from recipient'
     },
+    client_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'clients',
+            key: 'id'
+        }
+    },
     subject: {
         type: DataTypes.STRING,
         allowNull: true

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import socketService from '../../services/socket';
+import ClientDetailsModal from '../customers/ClientDetailsModal';
 
 const EmailMessages = () => {
     const [messages, setMessages] = useState([]);
@@ -18,8 +20,19 @@ const EmailMessages = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const accountFilter = searchParams.get('account');
 
+    const [emailAccounts, setEmailAccounts] = useState([]);
+    const [selectedClientId, setSelectedClientId] = useState(null);
+
     useEffect(() => {
         fetchData();
+
+        const handleNewEmail = () => {
+            console.log('New email received, refreshing messages...');
+            fetchData();
+        };
+
+        socketService.on('new_email', handleNewEmail);
+        return () => socketService.off('new_email', handleNewEmail);
     }, []);
 
     const fetchData = async () => {
@@ -187,9 +200,19 @@ const EmailMessages = () => {
                     <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-1">
                             <h4 className={`font-bold truncate ${msg.is_read ? 'text-gray-300' : 'text-white'}`}>
-                                {msg.direction === 'outbound' 
-                                    ? `An: ${msg.recipient_name || msg.recipient_email || msg.recipient}` 
-                                    : (msg.sender_name || msg.sender_email || msg.sender)}
+                                <button 
+                                    onClick={(e) => {
+                                        if (msg.client_id) {
+                                            e.stopPropagation();
+                                            setSelectedClientId(msg.client_id);
+                                        }
+                                    }}
+                                    className={`${msg.client_id ? 'hover:text-blue-400 border-b border-white/10 hover:border-blue-400' : 'cursor-default'} transition-all`}
+                                >
+                                    {msg.direction === 'outbound' 
+                                        ? `An: ${msg.recipient_name || msg.recipient_email || msg.recipient}` 
+                                        : (msg.sender_name || msg.sender_email || msg.sender)}
+                                </button>
                             </h4>
                             <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-widest">{new Date(msg.received_at).toLocaleDateString()}</span>
                         </div>
@@ -226,7 +249,12 @@ const EmailMessages = () => {
                     <div>
                         <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
                         <p className="text-sm text-gray-400">
-                            Von: <span className="text-blue-400">{selectedMessage.sender_name || selectedMessage.sender_email || selectedMessage.sender}</span> 
+                            Von: <span 
+                                    onClick={() => selectedMessage.client_id && setSelectedClientId(selectedMessage.client_id)}
+                                    className={`text-blue-400 ${selectedMessage.client_id ? 'cursor-pointer hover:underline' : ''}`}
+                                 >
+                                    {selectedMessage.sender_name || selectedMessage.sender_email || selectedMessage.sender}
+                                 </span> 
                             {selectedMessage.recipient && <span> • An: <span className="text-blue-400">{selectedMessage.recipient_name || selectedMessage.recipient_email || selectedMessage.recipient}</span></span>}
                             • {new Date(selectedMessage.received_at).toLocaleString()}
                         </p>
@@ -404,9 +432,7 @@ const EmailMessages = () => {
                 <div className="lg:col-span-3 space-y-2">
                     {[
                         { id: 'inbox', label: 'Posteingang', icon: 'fa-inbox', count: true },
-                        { id: 'sent', label: 'Gesendet', icon: 'fa-paper-plane' },
-                        { id: 'drafts', label: 'Entwürfe', icon: 'fa-file-lines' },
-                        { id: 'trash', label: 'Papierkorb', icon: 'fa-trash-can' }
+                        { id: 'sent', label: 'Gesendet', icon: 'fa-paper-plane' }
                     ].map(item => (
                         <button
                             key={item.id}
@@ -433,6 +459,14 @@ const EmailMessages = () => {
                      renderInbox()}
                 </div>
             </div>
+
+            {/* Client Details Modal */}
+            {selectedClientId && (
+                <ClientDetailsModal 
+                    clientId={selectedClientId} 
+                    onClose={() => setSelectedClientId(null)} 
+                />
+            )}
             
             <style dangerouslySetInnerHTML={{ __html: `
                 .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); }

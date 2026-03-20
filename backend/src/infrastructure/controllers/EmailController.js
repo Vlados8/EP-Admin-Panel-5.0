@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const FormData = require('form-data');
 const Mailgun = require('mailgun.js');
 const { EmailAccount, Email, Attachment, Company, User, Client } = require('../../domain/models');
+const { emitToCompany } = require('../websocket');
 const AppError = require('../../utils/appError');
 
 // Initialize Mailgun
@@ -457,8 +458,9 @@ exports.sendEmail = async (req, res, next) => {
 
         // --- NEW: Recipient Identity Lookup ---
         let recipientName = extractName(to);
+        let client = null;
         if (to) {
-            const client = await Client.findOne({
+            client = await Client.findOne({
                 where: { email: to, company_id: req.user.company_id }
             });
             if (client) {
@@ -483,6 +485,7 @@ exports.sendEmail = async (req, res, next) => {
             recipient: to,
             recipient_name: recipientName,
             recipient_email: to,
+            client_id: client ? client.id : null,
             subject: subject,
             body_html: html || null,
             body_plain: text || null,
@@ -573,9 +576,10 @@ exports.receiveWebhook = async (req, res, next) => {
         }
 
         // --- NEW: Client Identity Lookup ---
+        let client = null;
         // If we have a company_id, try to find a matching client for the sender
         if (company_id && senderEmail) {
-            const client = await Client.findOne({
+            client = await Client.findOne({
                 where: { email: senderEmail, company_id }
             });
             if (client) {
@@ -592,6 +596,7 @@ exports.receiveWebhook = async (req, res, next) => {
             recipient: toRaw,
             recipient_name: recipientName,
             recipient_email: recipientEmail,
+            client_id: client ? client.id : null,
             subject: subject,
             body_html: body_html,
             body_plain: body_plain,
@@ -599,6 +604,15 @@ exports.receiveWebhook = async (req, res, next) => {
             direction: 'inbound',
             company_id: company_id
         });
+
+        // 7. Emit WebSocket notification for real-time UI updates
+        if (company_id) {
+            emitToCompany(company_id, 'new_email', {
+                email_id: savedEmail.id,
+                account: recipientEmail,
+                sender_name: senderName
+            });
+        }
 
         // Handle attachments if any
         if (req.files && req.files.length > 0) {

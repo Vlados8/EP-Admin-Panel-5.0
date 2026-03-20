@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import api from '../services/api';
+import socketService from '../services/socket';
 
 const NavItem = ({ to, icon, label, isActive, badge }) => (
     <Link
@@ -58,16 +59,29 @@ const Sidebar = () => {
     const currentPath = location.pathname;
     const [emailAccounts, setEmailAccounts] = useState([]);
 
+    const fetchAccounts = async () => {
+        try {
+            const res = await api.get('/emails');
+            setEmailAccounts(res.data.data.accounts || []);
+        } catch (err) {
+            console.error('Error fetching email accounts for sidebar:', err);
+        }
+    };
+
     useEffect(() => {
-        const fetchAccounts = async () => {
-            try {
-                const res = await api.get('/emails');
-                setEmailAccounts(res.data.data.accounts || []);
-            } catch (err) {
-                console.error('Error fetching email accounts for sidebar:', err);
-            }
-        };
         fetchAccounts();
+
+        // Listen for real-time email updates
+        const handleNewEmail = () => {
+            console.log('New email received, updating sidebar badges...');
+            fetchAccounts();
+        };
+
+        socketService.on('new_email', handleNewEmail);
+
+        return () => {
+            socketService.off('new_email', handleNewEmail);
+        };
     }, []);
 
     const mainItems = [
