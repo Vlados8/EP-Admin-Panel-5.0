@@ -1,18 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import api from '../services/api';
 
-const NavItem = ({ to, icon, label, isActive }) => (
+const NavItem = ({ to, icon, label, isActive, badge }) => (
     <Link
         to={to}
-        className={`nav-item px-6 py-3 flex items-center gap-4 text-sm ${isActive ? 'active' : ''}`}
+        className={`nav-item px-6 py-3 flex items-center justify-between gap-4 text-sm ${isActive ? 'active' : ''}`}
     >
-        <i className={`fa-solid ${icon} w-5 text-center`}></i> {label}
+        <div className="flex items-center gap-4">
+            <i className={`fa-solid ${icon} w-5 text-center`}></i> {label}
+        </div>
+        {badge && (
+            <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[1.25rem] text-center">
+                {badge}
+            </span>
+        )}
     </Link>
 );
 
-const NavGroup = ({ label, items, currentPath }) => {
-    const isGroupActive = items.some(item => currentPath === item.path);
+const NavGroup = ({ label, items, currentPath, search }) => {
+    const fullPath = currentPath + search;
+    const isGroupActive = items.some(item => currentPath === item.path || fullPath === item.path);
     const [isOpen, setIsOpen] = useState(isGroupActive);
 
     return (
@@ -33,7 +42,8 @@ const NavGroup = ({ label, items, currentPath }) => {
                             to={route.path}
                             icon={route.icon}
                             label={route.label}
-                            isActive={currentPath === route.path}
+                            badge={route.badge}
+                            isActive={currentPath === route.path || fullPath === route.path}
                         />
                     ))}
                 </div>
@@ -44,9 +54,21 @@ const NavGroup = ({ label, items, currentPath }) => {
 
 const Sidebar = () => {
     const { user } = useSelector(state => state.auth);
-    console.log('DEBUG: Current User Role:', user?.role);
     const location = useLocation();
     const currentPath = location.pathname;
+    const [emailAccounts, setEmailAccounts] = useState([]);
+
+    useEffect(() => {
+        const fetchAccounts = async () => {
+            try {
+                const res = await api.get('/emails');
+                setEmailAccounts(res.data.data.accounts || []);
+            } catch (err) {
+                console.error('Error fetching email accounts for sidebar:', err);
+            }
+        };
+        fetchAccounts();
+    }, []);
 
     const mainItems = [
         { path: '/dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
@@ -61,9 +83,32 @@ const Sidebar = () => {
         { path: '/support', icon: 'fa-headset', label: 'Support' }
     ];
 
+    const totalUnread = emailAccounts.reduce((sum, acc) => sum + (acc.unread_count || 0), 0);
+
+    const emailGroup = {
+        label: 'E-Mail System',
+        items: [
+            { path: '/emails', icon: 'fa-envelope-open-text', label: 'Konten' },
+            { 
+                path: '/email-messages', 
+                icon: 'fa-inbox', 
+                label: 'Alle Nachrichten',
+                badge: totalUnread > 0 ? totalUnread : null
+            },
+            ...emailAccounts.map(acc => ({
+                path: `/email-messages?account=${encodeURIComponent(acc.email)}`,
+                icon: 'fa-at',
+                label: acc.email,
+                isShort: true,
+                badge: acc.unread_count > 0 ? acc.unread_count : null
+            }))
+        ]
+    };
+
     const apiGroup = {
         label: 'System & API',
         items: [
+            { path: '/settings/email-api', icon: 'fa-envelope', label: 'E-Mail API' },
             { path: '/settings/api-keys', icon: 'fa-key', label: 'API-Schlüssel' },
             { path: '/settings/api-integration', icon: 'fa-code', label: 'API Integration' }
         ]
@@ -94,6 +139,14 @@ const Sidebar = () => {
                         />
                     ))}
                 </div>
+
+                {/* E-Mail System - Always Visible */}
+                <NavGroup 
+                    label={emailGroup.label} 
+                    items={emailGroup.items} 
+                    currentPath={currentPath} 
+                    search={location.search}
+                />
 
                 {/* API Settings - Collapsible - Only for Admins */}
                 {(user?.role?.name?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (

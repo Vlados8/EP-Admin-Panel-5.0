@@ -15,6 +15,9 @@ import Inquiries from './features/inquiries/Inquiries';
 import ProjectDetails from './features/projects/ProjectDetails';
 import ApiKeys from './pages/Settings/ApiKeys';
 import ApiIntegration from './pages/Settings/ApiIntegration';
+import Emails from './features/emails/Emails';
+import EmailMessages from './features/emails/EmailMessages';
+import EmailApi from './features/emails/EmailApi';
 
 // Protect Routes with actual auth state
 const RequireAuth = ({ children }) => {
@@ -47,7 +50,10 @@ function App() {
                     <Route path="kategorien" element={<Categories />} />
                     <Route path="anfragen" element={<Inquiries />} />
                     <Route path="support" element={<Support />} />
+                    <Route path="emails" element={<Emails />} />
+                    <Route path="email-messages" element={<EmailMessages />} />
                     <Route path="settings">
+                        <Route path="email-api" element={<EmailApi />} />
                         <Route path="api-keys" element={<ApiKeys />} />
                         <Route path="api-integration" element={<ApiIntegration />} />
                     </Route>

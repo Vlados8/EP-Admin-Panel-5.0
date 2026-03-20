@@ -3,8 +3,9 @@ const bcrypt = require('bcryptjs');
 
 exports.getAllUsers = async (req, res, next) => {
     try {
-        // TODO: In production, filter by req.user.company_id
+        const company_id = req.user.company_id;
         const users = await User.findAll({
+            where: { company_id },
             attributes: { exclude: ['password_hash'] },
             include: [
                 { model: Role, as: 'role', attributes: ['id', 'name'] },
@@ -24,9 +25,10 @@ exports.getAllUsers = async (req, res, next) => {
 
 exports.createUser = async (req, res, next) => {
     try {
-        const { name, email, phone, password, role_id, company_id, manager_id, specialty } = req.body;
+        const { name, email, phone, password, role_id, manager_id, specialty } = req.body;
+        const company_id = req.user.company_id;
 
-        if (!name || !email || !password || !company_id) {
+        if (!name || !email || !password) {
             return res.status(400).json({ status: 'fail', message: 'Missing required fields' });
         }
 

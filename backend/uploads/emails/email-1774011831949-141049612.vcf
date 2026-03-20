@@ -1,0 +1,23 @@
+BEGIN:VCARD
+VERSION:2.1
+X-MS-SIGNATURE:YES
+N;LANGUAGE=en-us:Zimmermann;Friedrich;;Herr
+FN:Herr Friedrich Zimmermann
+TEL;WORK;VOICE:+49 2331 3771962
+TEL;CELL;VOICE:+49 1523 2037838
+ADR;WORK:;;Friedrich-Ebert-Platz 5;Hagen;;58095;Deutschland
+LABEL;WORK;ENCODING=QUOTED-PRINTABLE:Friedrich-Ebert-Platz 5=0D=0A=
+=0D=0A=
+58095 Hagen=0D=0A=
+Deutschland
+ADR;HOME:;;Milly-Steger-Str. 5;Hagen;;58093;Deutschland
+LABEL;HOME;ENCODING=QUOTED-PRINTABLE:Milly-Steger-Str. 5=0D=0A=
+=0D=0A=
+58093 Hagen=0D=0A=
+Deutschland
+X-MS-OL-DEFAULT-POSTAL-ADDRESS:0
+URL;WORK:www.allfinanz.ag/Friedrich.Zimmermann
+EMAIL;PREF;INTERNET:Friedrich.Zimmermann@allfinanz.ag
+X-MS-OL-DESIGN;CHARSET=utf-8:<card xmlns="http://schemas.microsoft.com/office/outlook/12/electronicbusinesscards" ver="1.0" layout="left" bgcolor="ffffff"><img xmlns="" align="fit" area="16" use="cardpicture"/><fld xmlns="" prop="name" align="left" dir="ltr" style="b" color="000000" size="10"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="telwork" align="left" dir="ltr" color="d48d2a" size="8"><label align="right" color="626262">Geschäftlich</label></fld><fld xmlns="" prop="telcell" align="left" dir="ltr" color="d48d2a" size="8"><label align="right" color="626262">Mobiltelefon</label></fld><fld xmlns="" prop="email" align="left" dir="ltr" color="d48d2a" size="8"/><fld xmlns="" prop="addrwork" align="left" dir="ltr" color="000000" size="8"/><fld xmlns="" prop="addrhome" align="left" dir="ltr" color="000000" size="8"/><fld xmlns="" prop="webwork" align="left" dir="ltr" color="000000" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/><fld xmlns="" prop="blank" size="8"/></card>
+REV:20251113T141506Z
+END:VCARD

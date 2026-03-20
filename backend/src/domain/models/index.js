@@ -23,6 +23,9 @@ const ProjectStageImage = require('./ProjectStageImage');
 const SupportTicket = require('./SupportTicket');
 const SupportResponse = require('./SupportResponse');
 const ApiKey = require('./ApiKey');
+const EmailAccount = require('./EmailAccount');
+const Email = require('./Email');
+const Attachment = require('./Attachment');
 
 // Associations
 
@@ -136,6 +139,22 @@ SupportTicket.hasMany(SupportResponse, { foreignKey: 'ticket_id', as: 'responses
 SupportResponse.belongsTo(SupportTicket, { foreignKey: 'ticket_id', as: 'ticket' });
 SupportResponse.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// 8. Email Accounts
+EmailAccount.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
+User.hasMany(EmailAccount, { foreignKey: 'user_id', as: 'assigned_email_accounts' });
+EmailAccount.belongsTo(User, { foreignKey: 'user_id', as: 'assigned_user' });
+
+// 9. Emails & Attachments
+Email.hasMany(Attachment, { foreignKey: 'email_id', as: 'attachments', onDelete: 'CASCADE' });
+Attachment.belongsTo(Email, { foreignKey: 'email_id', as: 'email' });
+
+Inquiry.hasMany(Attachment, { foreignKey: 'inquiry_id', as: 'attachments', onDelete: 'CASCADE' });
+Attachment.belongsTo(Inquiry, { foreignKey: 'inquiry_id', as: 'inquiry' });
+
+Company.hasMany(Email, { foreignKey: 'company_id', as: 'emails' });
+Email.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
 module.exports = {
     sequelize,
     Company,
@@ -159,7 +178,9 @@ module.exports = {
     TaskImage,
     ProjectStage,
     ProjectStageImage,
-    SupportTicket,
     SupportResponse,
-    ApiKey
+    ApiKey,
+    EmailAccount,
+    Email,
+    Attachment
 };

@@ -22,7 +22,7 @@ app.get('/api/v1/health', async (req, res) => {
     const sequelize = require('./config/database');
     const fs = require('fs');
     const path = require('path');
-    
+
     let dbStatus = 'connected';
     try {
         await sequelize.authenticate();
@@ -58,7 +58,9 @@ app.get('/api/v1/health', async (req, res) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads/emails', express.static(path.join(__dirname, '../uploads/emails')));
 
 // Request Logging Middleware
 app.use((req, res, next) => {
@@ -97,6 +99,7 @@ try {
     const inquiryRoutes = require('./infrastructure/routes/inquiryRoutes');
     const projectRoutes = require('./infrastructure/routes/projectRoutes');
     const supportRoutes = require('./infrastructure/routes/supportRoutes');
+    const emailRoutes = require('./infrastructure/routes/emailRoutes');
 
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/users', userRoutes);
@@ -110,16 +113,35 @@ try {
     app.use('/api/v1/projects', projectRoutes);
     app.use('/api/v1/project-stages', require('./infrastructure/routes/projectStageRoutes'));
     app.use('/api/v1/support', supportRoutes);
+    app.use('/api/v1/emails', emailRoutes);
+
+    // Public webhook for Mailgun (no auth)
+    const multer = require('multer');
+    const upload = multer({
+        storage: multer.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, path.join(__dirname, '../uploads/emails'));
+            },
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                cb(null, 'email-' + uniqueSuffix + path.extname(file.originalname));
+            }
+        })
+    });
+    app.post('/api/v1/emails/webhook', upload.any(), require('./infrastructure/controllers/EmailController').receiveWebhook);
     
+    // MyGo Integration Webhook (Lead + Attachments)
+    app.post('/api/v1/integrations/mygo', upload.any(), require('./infrastructure/controllers/IntegrationController').handleMyGoWebhook);
+
     // The problematic route
     const apiKeyRoutes = require(apiKeyRoutesPath);
     app.use('/api/v1/api-keys', apiKeyRoutes);
-    
+
 } catch (err) {
     console.error('CRITICAL: Route initialization failed:', err.message);
     app.use('/api/v1', (req, res) => {
-        res.status(500).json({ 
-            status: 'error', 
+        res.status(500).json({
+            status: 'error',
             message: 'API is partially unavailable due to module resolution issues.',
             error: err.message
         });
@@ -169,7 +191,7 @@ if (require.main === module) {
         require('./domain/models');
 
         const PORT = process.env.PORT || 3000;
-        
+
         // Start listening IMMEDIATELY so Railway healthcheck finds an open port
         server.listen(PORT, '0.0.0.0', async () => {
             console.log(`Server is now listening on port ${PORT}`);
@@ -180,8 +202,71 @@ if (require.main === module) {
             const seedDatabase = require('./infrastructure/database/seeder');
             try {
                 console.log('Connecting to database and synchronizing...');
-                await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+                await sequelize.sync({ alter: false });
                 console.log('Database synchronized successfully.');
+
+                // MANUALLY FIX missing columns to resolve "Unknown column 'user_id'"
+                try {
+                    console.log('Verifying email_accounts schema...');
+                    const [results] = await sequelize.query("SHOW COLUMNS FROM email_accounts LIKE 'user_id'");
+                    if (results.length === 0) {
+                        console.log('Adding missing user_id column to email_accounts...');
+                        await sequelize.query("ALTER TABLE email_accounts ADD COLUMN user_id CHAR(36) NULL COMMENT 'Assigned user, null if shared'");
+                    }
+                    
+                    const [sharedResults] = await sequelize.query("SHOW COLUMNS FROM email_accounts LIKE 'is_shared'");
+                    if (sharedResults.length === 0) {
+                        console.log('Adding missing is_shared column to email_accounts...');
+                        await sequelize.query("ALTER TABLE email_accounts ADD COLUMN is_shared BOOLEAN DEFAULT 1 COMMENT 'If true, everyone in the company can access it'");
+                    }
+
+                    const [displayNameResults] = await sequelize.query("SHOW COLUMNS FROM email_accounts LIKE 'display_name'");
+                    if (displayNameResults.length === 0) {
+                        console.log('Adding missing display_name column to email_accounts...');
+                        await sequelize.query("ALTER TABLE email_accounts ADD COLUMN display_name VARCHAR(255) NULL AFTER is_shared");
+                    }
+
+                    const [readResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'is_read'");
+                    if (readResults.length === 0) {
+                        console.log('Adding missing is_read column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN is_read BOOLEAN DEFAULT 0 AFTER company_id");
+                    }
+
+                    const [directionResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'direction'");
+                    if (directionResults.length === 0) {
+                        console.log('Adding missing direction column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN direction ENUM('inbound', 'outbound') DEFAULT 'inbound' AFTER body_plain");
+                    }
+
+                    const [senderEmailResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'sender_email'");
+                    if (senderEmailResults.length === 0) {
+                        console.log('Adding missing sender_email column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN sender_email VARCHAR(255) NULL AFTER sender");
+                    }
+
+                    const [recipientEmailResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'recipient_email'");
+                    if (recipientEmailResults.length === 0) {
+                        console.log('Adding missing recipient_email column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN recipient_email VARCHAR(255) NULL AFTER recipient");
+                    }
+
+                    const [inquiryIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'inquiry_id'");
+                    if (inquiryIdResults.length === 0) {
+                        console.log('Adding missing inquiry_id column to attachments...');
+                        await sequelize.query("ALTER TABLE attachments ADD COLUMN inquiry_id INT NULL COMMENT 'Linked inquiry'");
+                    }
+
+                    const [emailIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'email_id'");
+                    if (emailIdResults.length > 0 && emailIdResults[0].Null === 'NO') {
+                        console.log('Making email_id nullable in attachments...');
+                        // In MySQL we use MODIFY COLUMN to change nullability
+                        await sequelize.query("ALTER TABLE attachments MODIFY COLUMN email_id CHAR(36) NULL");
+                    }
+
+                    console.log('Schema verification complete.');
+                } catch (schemaErr) {
+                    console.warn('Non-critical: Schema fix failed (columns might already exist):', schemaErr.message);
+                }
 
                 console.log('Running initial seeding...');
                 await seedDatabase();
