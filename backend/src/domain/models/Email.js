@@ -16,6 +16,11 @@ const Email = sequelize.define('Email', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    sender_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Friendly name of the sender'
+    },
     sender_email: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -24,6 +29,11 @@ const Email = sequelize.define('Email', {
     recipient: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    recipient_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Friendly name of the recipient'
     },
     recipient_email: {
         type: DataTypes.STRING,

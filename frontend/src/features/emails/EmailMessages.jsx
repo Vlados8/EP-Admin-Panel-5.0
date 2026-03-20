@@ -187,7 +187,9 @@ const EmailMessages = () => {
                     <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-1">
                             <h4 className={`font-bold truncate ${msg.is_read ? 'text-gray-300' : 'text-white'}`}>
-                                {msg.direction === 'outbound' ? `An: ${msg.recipient}` : msg.sender}
+                                {msg.direction === 'outbound' 
+                                    ? `An: ${msg.recipient_name || msg.recipient_email || msg.recipient}` 
+                                    : (msg.sender_name || msg.sender_email || msg.sender)}
                             </h4>
                             <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-widest">{new Date(msg.received_at).toLocaleDateString()}</span>
                         </div>
@@ -224,8 +226,8 @@ const EmailMessages = () => {
                     <div>
                         <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
                         <p className="text-sm text-gray-400">
-                            Von: <span className="text-blue-400">{selectedMessage.sender}</span> 
-                            {selectedMessage.recipient && <span> • An: <span className="text-blue-400">{selectedMessage.recipient}</span></span>}
+                            Von: <span className="text-blue-400">{selectedMessage.sender_name || selectedMessage.sender_email || selectedMessage.sender}</span> 
+                            {selectedMessage.recipient && <span> • An: <span className="text-blue-400">{selectedMessage.recipient_name || selectedMessage.recipient_email || selectedMessage.recipient}</span></span>}
                             • {new Date(selectedMessage.received_at).toLocaleString()}
                         </p>
                     </div>

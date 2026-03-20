@@ -249,6 +249,18 @@ if (require.main === module) {
                         await sequelize.query("ALTER TABLE emails ADD COLUMN recipient_email VARCHAR(255) NULL AFTER recipient");
                     }
 
+                    const [senderNameResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'sender_name'");
+                    if (senderNameResults.length === 0) {
+                        console.log('Adding missing sender_name column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN sender_name VARCHAR(255) NULL AFTER sender");
+                    }
+
+                    const [recipientNameResults] = await sequelize.query("SHOW COLUMNS FROM emails LIKE 'recipient_name'");
+                    if (recipientNameResults.length === 0) {
+                        console.log('Adding missing recipient_name column to emails...');
+                        await sequelize.query("ALTER TABLE emails ADD COLUMN recipient_name VARCHAR(255) NULL AFTER recipient");
+                    }
+
                     const [inquiryIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'inquiry_id'");
                     if (inquiryIdResults.length === 0) {
                         console.log('Adding missing inquiry_id column to attachments...');

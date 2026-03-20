@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const FormData = require('form-data');
 const Mailgun = require('mailgun.js');
-const { EmailAccount, Email, Attachment, Company, User } = require('../../domain/models');
+const { EmailAccount, Email, Attachment, Company, User, Client } = require('../../domain/models');
 const AppError = require('../../utils/appError');
 
 // Initialize Mailgun
@@ -455,6 +455,17 @@ exports.sendEmail = async (req, res, next) => {
             }));
         }
 
+        // --- NEW: Recipient Identity Lookup ---
+        let recipientName = extractName(to);
+        if (to) {
+            const client = await Client.findOne({
+                where: { email: to, company_id: req.user.company_id }
+            });
+            if (client) {
+                recipientName = client.name;
+            }
+        }
+
         let result;
         try {
             result = await mg.messages.create(domain, messageData);
@@ -467,8 +478,10 @@ exports.sendEmail = async (req, res, next) => {
         const savedEmail = await Email.create({
             mailgun_id: result.id,
             sender: messageData.from,
+            sender_name: senderName || 'Empire Premium Bau',
             sender_email: from,
             recipient: to,
+            recipient_name: recipientName,
             recipient_email: to,
             subject: subject,
             body_html: html || null,
@@ -505,17 +518,34 @@ exports.sendEmail = async (req, res, next) => {
 /**
  * Webhook handler for inbound emails from Mailgun
  */
+const extractName = (str) => {
+    if (!str) return null;
+    const match = str.match(/^([^<]+)/);
+    if (match) {
+        const name = match[1].trim().replace(/^"|"$/g, '');
+        return name || null;
+    }
+    return null;
+};
+
+/**
+ * Webhook handler for inbound emails from Mailgun
+ */
 exports.receiveWebhook = async (req, res, next) => {
     try {
         const signatureData = req.body['signature'] || {};
         const { timestamp, token, signature } = signatureData;
         
         // Mailgun inbound format varies; we try common fields
-        const fromRaw = req.body.sender || req.body.from || 'unknown@sender.com';
+        const fromRaw = req.body.sender || req.body.from || req.body.From || 'unknown@sender.com';
         const toRaw = req.body.recipient || req.body.To || 'unknown@recipient.com';
         
-        const sender = extractEmail(fromRaw);
-        const recipient = extractEmail(toRaw);
+        const senderEmail = extractEmail(fromRaw);
+        const recipientEmail = extractEmail(toRaw);
+        
+        // Extract name from "Name <email>" format
+        let senderName = extractName(fromRaw);
+        let recipientName = extractName(toRaw);
         
         const subject = req.body.subject || '(No Subject)';
         const body_html = req.body['body-html'] || null;
@@ -534,25 +564,41 @@ exports.receiveWebhook = async (req, res, next) => {
             }
         }
 
+        // Try to find the company_id and account
+        let company_id = null;
+        const account = await EmailAccount.findOne({ where: { email: recipientEmail } });
+        if (account) {
+            company_id = account.company_id;
+            recipientName = recipientName || account.display_name;
+        }
+
+        // --- NEW: Client Identity Lookup ---
+        // If we have a company_id, try to find a matching client for the sender
+        if (company_id && senderEmail) {
+            const client = await Client.findOne({
+                where: { email: senderEmail, company_id }
+            });
+            if (client) {
+                senderName = client.name; // Higher priority than the header name
+            }
+        }
+
         // Save Email to DB
         const savedEmail = await Email.create({
             mailgun_id: mailgun_id,
             sender: fromRaw,
-            sender_email: sender,
+            sender_name: senderName,
+            sender_email: senderEmail,
             recipient: toRaw,
-            recipient_email: recipient,
+            recipient_name: recipientName,
+            recipient_email: recipientEmail,
             subject: subject,
             body_html: body_html,
             body_plain: body_plain,
             received_at: new Date(),
-            direction: 'inbound'
+            direction: 'inbound',
+            company_id: company_id
         });
-
-        // Try to find the company_id based on the recipient account
-        const account = await EmailAccount.findOne({ where: { email: recipient } });
-        if (account) {
-            await savedEmail.update({ company_id: account.company_id });
-        }
 
         // Handle attachments if any
         if (req.files && req.files.length > 0) {
