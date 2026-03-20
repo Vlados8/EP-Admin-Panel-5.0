@@ -22,6 +22,7 @@ const EmailMessages = () => {
 
     const [emailAccounts, setEmailAccounts] = useState([]);
     const [selectedClientId, setSelectedClientId] = useState(null);
+    const [selectedClientEmail, setSelectedClientEmail] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -202,12 +203,11 @@ const EmailMessages = () => {
                             <h4 className={`font-bold truncate ${msg.is_read ? 'text-gray-300' : 'text-white'}`}>
                                 <button 
                                     onClick={(e) => {
-                                        if (msg.client_id) {
-                                            e.stopPropagation();
-                                            setSelectedClientId(msg.client_id);
-                                        }
+                                        e.stopPropagation();
+                                        setSelectedClientId(msg.client_id);
+                                        setSelectedClientEmail(msg.direction === 'outbound' ? (msg.recipient_email || msg.recipient) : (msg.sender_email || msg.sender));
                                     }}
-                                    className={`${msg.client_id ? 'hover:text-blue-400 border-b border-white/10 hover:border-blue-400' : 'cursor-default'} transition-all`}
+                                    className="hover:text-blue-400 border-b border-white/10 hover:border-blue-400 transition-all"
                                 >
                                     {msg.direction === 'outbound' 
                                         ? `An: ${msg.recipient_name || msg.recipient_email || msg.recipient}` 
@@ -250,12 +250,25 @@ const EmailMessages = () => {
                         <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
                         <p className="text-sm text-gray-400">
                             Von: <span 
-                                    onClick={() => selectedMessage.client_id && setSelectedClientId(selectedMessage.client_id)}
-                                    className={`text-blue-400 ${selectedMessage.client_id ? 'cursor-pointer hover:underline' : ''}`}
+                                    onClick={() => {
+                                        setSelectedClientId(selectedMessage.client_id);
+                                        setSelectedClientEmail(selectedMessage.sender_email || selectedMessage.sender);
+                                    }}
+                                    className="text-blue-400 cursor-pointer hover:underline"
                                  >
                                     {selectedMessage.sender_name || selectedMessage.sender_email || selectedMessage.sender}
                                  </span> 
-                            {selectedMessage.recipient && <span> • An: <span className="text-blue-400">{selectedMessage.recipient_name || selectedMessage.recipient_email || selectedMessage.recipient}</span></span>}
+                            {selectedMessage.recipient && (
+                                <span> • An: <span 
+                                    onClick={() => {
+                                        setSelectedClientId(selectedMessage.client_id);
+                                        setSelectedClientEmail(selectedMessage.recipient_email || selectedMessage.recipient);
+                                    }}
+                                    className="text-blue-400 cursor-pointer hover:underline"
+                                >
+                                    {selectedMessage.recipient_name || selectedMessage.recipient_email || selectedMessage.recipient}
+                                </span></span>
+                            )}
                             • {new Date(selectedMessage.received_at).toLocaleString()}
                         </p>
                     </div>
@@ -410,22 +423,31 @@ const EmailMessages = () => {
         </div>
     );
 
+    const renderHeader = () => {
+        const currentAccount = accounts.find(acc => acc.email === accountFilter);
+        return (
+            <div className="flex justify-between items-start mb-10">
+                <div>
+                    <h1 className="text-3xl font-black text-white mb-2 tracking-tight">
+                        Nachrichten Zentrale
+                        {currentAccount && (
+                             <span className="text-blue-500 ml-4 text-xl font-medium border-l border-white/20 pl-4 animate-[fadeIn_0.3s_ease-out]">
+                                {currentAccount.display_name || currentAccount.email}
+                             </span>
+                        )}
+                    </h1>
+                    <p className="text-gray-500 max-w-lg">Verwalten Sie Ihre Kommunikation über Ihre Domain-E-Mails.</p>
+                </div>
+                <button onClick={() => setView('compose')} className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 group">
+                    <i className="fa-solid fa-paper-plane group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i> Verfassen
+                </button>
+            </div>
+        );
+    };
+
     return (
         <div className="animate-[fadeIn_0.4s_ease-out_forwards] p-6 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Nachrichten Zentrale</h2>
-                    <p className="text-gray-400">Verwalten Sie Ihre Kommunikation über Ihre Domain-E-Mails.</p>
-                </div>
-                <div className="flex gap-3">
-                    <button 
-                        onClick={() => setView('compose')}
-                        className={`px-5 py-3 rounded-xl flex items-center gap-2 transition-all font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20`}
-                    >
-                        <i className="fa-solid fa-pen-nib"></i> Verfassen
-                    </button>
-                </div>
-            </div>
+            {renderHeader()}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Sidebar Navigation */}
@@ -433,41 +455,53 @@ const EmailMessages = () => {
                     {[
                         { id: 'inbox', label: 'Posteingang', icon: 'fa-inbox', count: true },
                         { id: 'sent', label: 'Gesendet', icon: 'fa-paper-plane' }
-                    ].map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => { setView(item.id); setSelectedMessage(null); }}
-                            className={`w-full px-4 py-3 rounded-2xl flex items-center justify-between transition-all group ${view === item.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <i className={`fa-solid ${item.icon} text-sm`}></i>
-                                <span className="text-sm font-bold tracking-tight">{item.label}</span>
-                            </div>
-                            {item.count && (
-                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${view === item.id ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-500'}`}>
-                                    {messages.filter(m => (m.direction === 'inbound' || !m.direction) && !m.is_read).length}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                    ].map(item => {
+                        const count = messages.filter(m => 
+                            (item.id === 'inbox' ? (m.direction === 'inbound' || !m.direction) : (m.direction === 'outbound')) && 
+                            !m.is_read && 
+                            (!accountFilter || (item.id === 'inbox' ? m.recipient_email : m.sender_email) === accountFilter)
+                        ).length;
+
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => { setView(item.id); setSelectedMessage(null); }}
+                                className={`w-full px-4 py-3 rounded-2xl flex items-center justify-between transition-all group ${view === item.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <i className={`fa-solid ${item.icon} text-sm`}></i>
+                                    <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                                </div>
+                                {item.count && count > 0 && (
+                                    <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${view === item.id ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-500'}`}>
+                                        {count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Content Area */}
                 <div className="lg:col-span-9">
-                    {view === 'read' && selectedMessage ? renderRead() : 
-                     view === 'compose' ? renderCompose() : 
+                    {view === 'read' && selectedMessage ? renderRead() :
+                     view === 'compose' ? renderCompose() :
                      renderInbox()}
                 </div>
             </div>
 
             {/* Client Details Modal */}
-            {selectedClientId && (
-                <ClientDetailsModal 
-                    clientId={selectedClientId} 
-                    onClose={() => setSelectedClientId(null)} 
+            {selectedClientId || selectedClientEmail ? (
+                <ClientDetailsModal
+                    clientId={selectedClientId}
+                    email={selectedClientEmail}
+                    onClose={() => {
+                        setSelectedClientId(null);
+                        setSelectedClientEmail(null);
+                    }}
                 />
-            )}
-            
+            ) : null}
+
             <style dangerouslySetInnerHTML={{ __html: `
                 .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); }
                 .glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); outline: none; transition: all 0.3s ease; }

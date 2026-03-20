@@ -1,6 +1,12 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const getSocketUrl = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+    // Remove /api/v1 or any trailing path to get the base origin
+    return apiUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+};
+
+const SOCKET_URL = getSocketUrl();
 
 class SocketService {
     constructor() {

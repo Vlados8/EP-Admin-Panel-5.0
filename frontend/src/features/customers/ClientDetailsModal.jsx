@@ -1,29 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const ClientDetailsModal = ({ clientId, onClose }) => {
+const ClientDetailsModal = ({ clientId, email, onClose }) => {
     const [client, setClient] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchClient = async () => {
             try {
                 setLoading(true);
-                const res = await api.get(`/clients/${clientId}`);
-                setClient(res.data.data.client);
+                setError(null);
+                setClient(null); // Clear previous client data
+
+                let foundClient = null;
+
+                // 1. Try fetching by ID if available
+                if (clientId) {
+                    try {
+                        const res = await api.get(`/clients/${clientId}`);
+                        foundClient = res.data.data.client;
+                    } catch (idErr) {
+                        console.log('Fetch by ID failed, trying email fallback...', idErr);
+                        // Do not set error here, as we have a fallback
+                    }
+                }
+
+                // 2. Fallback to searching by email if ID failed or is missing and email is provided
+                if (!foundClient && email) {
+                    try {
+                        const res = await api.get(`/clients/check-email?email=${encodeURIComponent(email)}`);
+                        if (res.data.data.exists) {
+                            foundClient = res.data.data.client;
+                        }
+                    } catch (emailErr) {
+                        console.error('Fetch by email failed:', emailErr);
+                        // If email fetch also fails, then we set a general error
+                    }
+                }
+
+                if (foundClient) {
+                    setClient(foundClient);
+                } else {
+                    setError('Klient konnte nicht gefunden werden.');
+                }
             } catch (err) {
                 console.error('Error fetching client details:', err);
+                setError('Fehler beim Laden der Klientendaten.');
             } finally {
                 setLoading(false);
             }
         };
 
-        if (clientId) {
+        if (clientId || email) {
             fetchClient();
+        } else {
+            // If neither clientId nor email is provided, ensure loading is false and client is null
+            setLoading(false);
+            setClient(null);
+            setError('Keine Klienten-ID oder E-Mail zum Suchen angegeben.');
         }
-    }, [clientId]);
+    }, [clientId, email]);
 
-    if (!clientId) return null;
+    if (!clientId && !email) return null; // Only render if we have something to search for
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-[fadeIn_0.3s_ease-out]">
