@@ -178,6 +178,7 @@ module.exports = {
     TaskImage,
     ProjectStage,
     ProjectStageImage,
+    SupportTicket,
     SupportResponse,
     ApiKey,
     EmailAccount,

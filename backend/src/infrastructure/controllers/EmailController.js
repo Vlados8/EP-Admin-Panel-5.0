@@ -398,6 +398,9 @@ exports.sendEmail = async (req, res, next) => {
         }
 
         const domain = process.env.MAILGUN_DOMAIN;
+        if (!domain) {
+            return next(new AppError('MAILGUN_DOMAIN is not configured.', 500));
+        }
 
         // --- NEW: Handle Sender Name ---
         let senderName = '';
@@ -405,6 +408,10 @@ exports.sendEmail = async (req, res, next) => {
             where: { email: from, company_id: req.user.company_id },
             include: [{ model: User, as: 'assigned_user', attributes: ['name'] }]
         });
+
+        if (!account) {
+             return next(new AppError(`Absender-Konto (${from}) nicht gefunden.`, 404));
+        }
 
         if (account) {
             if (account.is_shared) {
@@ -421,8 +428,8 @@ exports.sendEmail = async (req, res, next) => {
 
         // --- Branding (External Logo URLs) ---
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const headerLogoUrl = `${frontendUrl}/assets/Empire Premium white.png`;
-        const avatarLogoUrl = `${frontendUrl}/assets/Logo EP.png`;
+        const headerLogoUrl = `${frontendUrl}/assets/Empire%20Premium%20white.png`;
+        const avatarLogoUrl = `${frontendUrl}/assets/Logo%20EP.png`;
 
         const rawContent = html || (text ? text.replace(/\n/g, '<br>') : '');
         finalHtml = wrapInMonochromeTemplate(rawContent, subject, senderName || 'Empire Premium Bau', headerLogoUrl, avatarLogoUrl);
