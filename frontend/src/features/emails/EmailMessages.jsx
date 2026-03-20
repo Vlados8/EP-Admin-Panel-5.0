@@ -64,9 +64,7 @@ const EmailMessages = () => {
 
         try {
             setSending(true);
-            await api.post('/emails/send', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await api.post('/emails/send', formData);
             toast.success('E-Mail erfolgreich gesendet!');
             setView('inbox');
             setAttachments([]);

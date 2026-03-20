@@ -393,6 +393,10 @@ exports.sendEmail = async (req, res, next) => {
     try {
         const { from, to, subject, text, html } = req.body;
 
+        if (!from) {
+             return next(new AppError('E-Mail-Inhalt fehlt (Sender ist erforderlich).', 400));
+        }
+
         if (!mg) {
             return next(new AppError('Mailgun is not configured.', 500));
         }
