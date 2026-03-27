@@ -415,7 +415,7 @@ const Users = () => {
                                             type="email"
                                             required
                                             value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
                                             className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                                             placeholder="max@beispiel.de"
                                         />
@@ -565,7 +565,7 @@ const Users = () => {
                                             type="email"
                                             required
                                             value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
                                             className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                                         />
                                     </div>

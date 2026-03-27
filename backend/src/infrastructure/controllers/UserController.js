@@ -25,7 +25,8 @@ exports.getAllUsers = async (req, res, next) => {
 
 exports.createUser = async (req, res, next) => {
     try {
-        const { name, email, phone, password, role_id, manager_id, specialty } = req.body;
+        const { name, phone, password, role_id, manager_id, specialty } = req.body;
+        const email = req.body.email ? req.body.email.trim().toLowerCase() : null;
         const company_id = req.user.company_id;
 
         if (!name || !email || !password) {
@@ -73,7 +74,8 @@ exports.createUser = async (req, res, next) => {
 exports.updateUser = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, email, phone, role_id, status, manager_id, specialty } = req.body;
+        const { name, phone, role_id, status, manager_id, specialty } = req.body;
+        const email = req.body.email ? req.body.email.trim().toLowerCase() : null;
 
         const user = await User.findByPk(id);
         if (!user) {
@@ -135,7 +137,7 @@ exports.deleteUser = async (req, res, next) => {
             return res.status(404).json({ status: 'fail', message: 'User not found' });
         }
 
-        await user.destroy(); // Note: we have paranoid: true, so this is a soft delete
+        await user.destroy(); // soft delete
 
         res.status(204).json({
             status: 'success',
