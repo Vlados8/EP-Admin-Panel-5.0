@@ -86,7 +86,7 @@ exports.updateUser = async (req, res, next) => {
         
         if (email && email !== user.email) {
             const existingUser = await User.findOne({ where: { email } });
-            if (existingUser) {
+            if (existingUser && existingUser.id !== id) {
                 return res.status(400).json({ status: 'fail', message: 'Email is already in use' });
             }
             user.email = email;
