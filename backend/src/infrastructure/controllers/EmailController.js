@@ -66,7 +66,7 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
                 <img src="${headerLogoUrl}" alt="Empire Premium Logo" class="header-logo">
             </div>
             <div class="content">
-                <span class="subject-tag">Re: ${subject}</span>
+                <span class="subject-tag">Thema: ${subject}</span>
                 <div style="min-height: 200px;">
                     ${content}
                 </div>
@@ -79,14 +79,14 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
                 </div>
             </div>
             <div class="footer">
-                <a href="https://empire-premium.de" style="color: #ffffff; text-decoration: none; font-size: 14px; letter-spacing: 3px; font-weight: bold;">EMPIRE PREMIUM</a>
+                <a href="https://www.empire-premium-bau.de" style="color: #ffffff; text-decoration: none; font-size: 14px; letter-spacing: 3px; font-weight: bold;">EMPIRE PREMIUM</a>
                 <div style="height: 1px; background-color: #222222; width: 40px; margin: 25px auto;"></div>
                 <div class="social-links">
                     <a href="https://www.instagram.com/empire_premium_bau" class="social-link">Instagram</a>
                     <a href="https://www.tiktok.com/@empire.premium.bau" class="social-link">TikTok</a>
                 </div>
                 <div class="copyright">
-                    &copy; ${year} All rights reserved. <br> Empire Premium Property Group.
+                    &copy; ${year} Empire Premium Bau. Alle Rechte vorbehalten.
                 </div>
             </div>
         </div>

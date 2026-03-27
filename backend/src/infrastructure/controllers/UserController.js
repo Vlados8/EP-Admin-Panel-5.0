@@ -81,12 +81,28 @@ exports.updateUser = async (req, res, next) => {
         }
 
         user.name = name || user.name;
-        user.email = email || user.email;
+        
+        if (email && email !== user.email) {
+            const existingUser = await User.findOne({ where: { email } });
+            if (existingUser) {
+                return res.status(400).json({ status: 'fail', message: 'Email is already in use' });
+            }
+            user.email = email;
+        }
+
         user.phone = phone !== undefined ? phone : user.phone;
-        user.role_id = role_id !== undefined ? role_id : user.role_id;
-        user.manager_id = manager_id !== undefined ? manager_id : user.manager_id;
+        
+        // Handle UUIDs - convert empty string to null
+        user.role_id = role_id && role_id !== '' ? role_id : (role_id === '' ? null : user.role_id);
+        user.manager_id = manager_id && manager_id !== '' ? manager_id : (manager_id === '' ? null : user.manager_id);
+        
         user.specialty = specialty !== undefined ? specialty : user.specialty;
         user.status = status || user.status;
+
+        // Password update
+        if (req.body.password) {
+            user.password_hash = await bcrypt.hash(req.body.password, 10);
+        }
 
         await user.save();
 

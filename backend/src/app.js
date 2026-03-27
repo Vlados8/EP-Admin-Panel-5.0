@@ -18,7 +18,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "img-src": ["'self'", "data:", "https://ui-avatars.com", "https://*.empire-premium.de", "https://*.railway.app"],
+      "img-src": ["'self'", "data:", "https://ui-avatars.com", "https://*.empire-premium.de", "https://*.empire-premium-bau.de", "https://*.railway.app"],
       "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
       "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"]
     }

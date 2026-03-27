@@ -1,2 +1,7 @@
 github.com/Vlados8/EP-Admin-Panel-5.0
 hosted: railway
+
+mailgun
+API Key: [REDACTED]
+Sandbox domain: sandboxbc10cbd93b564a9497f4ad8fcc1223d7.mailgun.org
+Base URL: https://api.mailgun.net
