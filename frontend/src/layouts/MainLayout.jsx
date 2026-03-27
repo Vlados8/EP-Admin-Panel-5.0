@@ -59,7 +59,7 @@ const MainLayout = () => {
                     />
 
                     {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 page-section active">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 page-section active relative">
                         <Outlet />
                     </div>
                 </main>

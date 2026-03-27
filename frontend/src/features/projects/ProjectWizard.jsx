@@ -316,8 +316,8 @@ const ProjectWizard = ({ isOpen, onClose, onProjectCreated, initialData = null }
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-0">
-            <div className="bg-slate-900 border border-white/10 rounded-none w-full h-full overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-[fadeIn_0.3s_ease-out]">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex justify-center items-center p-0 md:p-6 lg:p-10 animate-[fadeIn_0.3s_ease-out]">
+            <div className="bg-slate-900 border border-white/10 rounded-none md:rounded-3xl w-full h-full max-w-5xl overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]">
 
                 {/* Header */}
                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
