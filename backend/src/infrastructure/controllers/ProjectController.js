@@ -3,10 +3,36 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/database');
 const fs = require('fs');
 const path = require('path');
+const { hasPermission } = require('../../utils/permissions');
 
 exports.getAllProjects = async (req, res) => {
     try {
+        const userRole = req.user.role?.name || req.user.role;
+        const whereClause = {};
+
+        // Role-based visibility filtering
+        if (!hasPermission(req.user, 'MANAGE_API_KEYS')) { // Not Admin/Büro
+            if (userRole === 'Worker') {
+                // Workers only see projects they are assigned to
+                whereClause[Op.and] = [
+                    sequelize.literal(`EXISTS (SELECT 1 FROM project_users AS pu WHERE pu.project_id = Project.id AND pu.user_id = '${req.user.id}')`)
+                ];
+            } else if (userRole === 'Projektleiter') {
+                // PL see projects they are in OR projects where no Projektleiter is assigned yet
+                whereClause[Op.or] = [
+                    sequelize.literal(`EXISTS (SELECT 1 FROM project_users AS pu WHERE pu.project_id = Project.id AND pu.user_id = '${req.user.id}')`),
+                    sequelize.literal(`NOT EXISTS (SELECT 1 FROM project_users AS pu WHERE pu.project_id = Project.id AND pu.role = 'projektleiter')`)
+                ];
+            } else if (userRole === 'Gruppenleiter') {
+                // GL now only see projects they are assigned to (as per audio feedback)
+                whereClause[Op.and] = [
+                    sequelize.literal(`EXISTS (SELECT 1 FROM project_users AS pu WHERE pu.project_id = Project.id AND pu.user_id = '${req.user.id}')`)
+                ];
+            }
+        }
+
         const projects = await Project.findAll({
+            where: whereClause,
             include: [
                 { model: Client, as: 'client' },
                 { model: User, as: 'creator', attributes: ['id', 'name', 'specialty'] },
@@ -75,6 +101,26 @@ exports.getProjectById = async (req, res) => {
         });
         if (!project) return res.status(404).json({ error: 'Project not found' });
 
+        const userRole = req.user.role?.name || req.user.role;
+        if (!hasPermission(req.user, 'MANAGE_API_KEYS')) {
+            const isAssigned = await ProjectUser.findOne({ where: { project_id: project.id, user_id: req.user.id } });
+            
+            if (userRole === 'Worker' && !isAssigned) {
+                return res.status(403).json({ error: 'Keine Berechtigung für dieses Projekt' });
+            }
+            
+            if (userRole === 'Gruppenleiter' && !isAssigned) {
+                return res.status(403).json({ error: 'Keine Berechtigung für dieses Projekt (Nur für Teilnehmer)' });
+            }
+
+            if (userRole === 'Projektleiter' && !isAssigned) {
+                const hasPL = await ProjectUser.findOne({ where: { project_id: project.id, role: 'projektleiter' } });
+                if (hasPL) {
+                    return res.status(403).json({ error: 'Dieses Projekt ist bereits einem anderen Projektleiter zugeordnet' });
+                }
+            }
+        }
+
         res.status(200).json({
             status: 'success',
             data: { project }
@@ -86,6 +132,11 @@ exports.getProjectById = async (req, res) => {
 };
 
 exports.createProject = async (req, res) => {
+    // Only Admin, Office, and Projektleiter can create projects
+    if (!hasPermission(req.user, 'MANAGE_PROJECTS')) {
+        return res.status(403).json({ error: 'Keine Berechtigung zum Erstellen von Projekten' });
+    }
+
     const t = await sequelize.transaction();
 
     try {
@@ -269,6 +320,11 @@ exports.createProject = async (req, res) => {
 };
 
 exports.updateProject = async (req, res) => {
+    // Worker cannot edit projects
+    if (req.user.role?.name === 'Worker' || req.user.role === 'Worker') {
+        return res.status(403).json({ error: 'Worker dürfen Projekte nicht bearbeiten' });
+    }
+
     const t = await sequelize.transaction();
     try {
         console.log(`[BACKEND] Updating project ${req.params.id} with body:`, JSON.stringify(req.body, null, 2));
@@ -393,6 +449,10 @@ exports.updateProject = async (req, res) => {
 };
 
 exports.deleteProject = async (req, res) => {
+    // Only Admin and Office can delete projects (as per user request GL/PL cannot delete)
+    if (!hasPermission(req.user, 'MANAGE_USERS')) { // MANAGE_USERS is proxy for Admin/Office
+        return res.status(403).json({ error: 'Nur Administratoren können Projekte löschen' });
+    }
     try {
         const project = await Project.findByPk(req.params.id);
         if (!project) return res.status(404).json({ error: 'Project not found' });

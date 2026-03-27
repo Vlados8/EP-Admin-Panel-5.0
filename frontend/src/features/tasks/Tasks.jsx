@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Tasks = () => {
     const { user: currentUser } = useSelector(state => state.auth);
@@ -105,8 +106,8 @@ const Tasks = () => {
     };
 
     // Calculate assignable users based on role
+    const canCreateTasks = usePermission('MANAGE_TASKS');
     const currentUserRole = currentUser?.role?.name || currentUser?.role;
-    const canCreateTasks = currentUserRole !== 'Worker';
 
     // Derived assignable users
     const assignableUsers = users.filter(u => {
@@ -124,11 +125,12 @@ const Tasks = () => {
                 task.title?.toLowerCase().includes(searchQuery.toLowerCase());
         }
 
-        // Show own tasks OR tasks of subordinates
+        // Show own tasks OR tasks of subordinates OR tasks created by me
         const isOwnTask = task.assigned_to_id === currentUser?.id;
         const isSubordinateTask = assignableUsers.some(u => u.id === task.assigned_to_id);
+        const isCreatedByMe = task.created_by_id === currentUser?.id;
 
-        return isOwnTask || isSubordinateTask;
+        return isOwnTask || isSubordinateTask || isCreatedByMe;
     });
 
     return (
@@ -198,7 +200,7 @@ const Tasks = () => {
                                             >
                                                 <i className="fa-solid fa-rotate"></i>
                                             </button>
-                                            {canCreateTasks && (
+                                            {(currentUserRole === 'Admin' || currentUserRole === 'Büro' || task.creator?.id === currentUser?.id) && canCreateTasks && (
                                                 <button
                                                     onClick={(e) => deleteTask(task.id, e)}
                                                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"

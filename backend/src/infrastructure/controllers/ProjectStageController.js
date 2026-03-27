@@ -1,7 +1,8 @@
-const { ProjectStage, User, ProjectStageImage } = require('../../domain/models');
+const { ProjectStage, User, ProjectStageImage, ProjectUser } = require('../../domain/models');
 const AppError = require('../../utils/appError');
 const fs = require('fs');
 const path = require('path');
+const { hasPermission } = require('../../utils/permissions');
 
 // Get all stages for a project
 exports.getStages = async (req, res, next) => {
@@ -42,6 +43,20 @@ exports.createStage = async (req, res, next) => {
 
         if (!title || !project_id) {
             return next(new AppError('Titel und Projekt-ID sind erforderlich', 400));
+        }
+
+        // Check if user is authorized for this project
+        if (!hasPermission(req.user, 'MANAGE_API_KEYS')) {
+            const isAssigned = await ProjectUser.findOne({ where: { project_id, user_id: req.user.id } });
+            if (!isAssigned) {
+                // For PL/GL, also check if project is unassigned
+                if (req.user.role?.name === 'Projektleiter' || req.user.role?.name === 'Gruppenleiter' || req.user.role === 'Projektleiter' || req.user.role === 'Gruppenleiter') {
+                    const hasPL = await ProjectUser.findOne({ where: { project_id, role: 'projektleiter' } });
+                    if (hasPL) return next(new AppError('Keine Berechtigung für dieses Projekt', 403));
+                } else {
+                    return next(new AppError('Keine Berechtigung für dieses Projekt', 403));
+                }
+            }
         }
 
         const newStage = await ProjectStage.create({
@@ -100,6 +115,26 @@ exports.updateStage = async (req, res, next) => {
     try {
         const stage = await ProjectStage.findByPk(req.params.id);
         if (!stage) return next(new AppError('Etappe nicht gefunden', 404));
+
+        // RBAC: Only creator or manager can update
+        const userRole = req.user.role?.name || req.user.role;
+        if (!hasPermission(req.user, 'MANAGE_API_KEYS')) {
+            const isManager = userRole === 'Projektleiter' || userRole === 'Gruppenleiter';
+            const isOwner = stage.created_by_id === req.user.id;
+            
+            if (!isOwner && !isManager) {
+                return next(new AppError('Keine Berechtigung zum Bearbeiten dieser Etappe', 403));
+            }
+            
+            // If manager, check if they are authorized for the project
+            if (isManager && !isOwner) {
+                const isAssigned = await ProjectUser.findOne({ where: { project_id: stage.project_id, user_id: req.user.id } });
+                if (!isAssigned) {
+                    const hasPL = await ProjectUser.findOne({ where: { project_id: stage.project_id, role: 'projektleiter' } });
+                    if (hasPL) return next(new AppError('Keine Berechtigung für dieses Projekt', 403));
+                }
+            }
+        }
 
         const { status, title, description, assigned_to_id, imagesToDelete } = req.body;
 
@@ -173,6 +208,17 @@ exports.deleteStage = async (req, res, next) => {
     try {
         const stage = await ProjectStage.findByPk(req.params.id);
         if (!stage) return next(new AppError('Etappe nicht gefunden', 404));
+
+        // RBAC: Only creator or manager can delete
+        const userRole = req.user.role?.name || req.user.role;
+        if (!hasPermission(req.user, 'MANAGE_API_KEYS')) {
+            const isManager = userRole === 'Projektleiter' || userRole === 'Gruppenleiter';
+            const isOwner = stage.created_by_id === req.user.id;
+            
+            if (!isOwner && !isManager) {
+                return next(new AppError('Keine Berechtigung zum Löschen dieser Etappe', 403));
+            }
+        }
 
         const stageId = String(stage.id);
         const projectId = String(stage.project_id);

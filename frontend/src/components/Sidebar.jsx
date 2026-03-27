@@ -20,10 +20,14 @@ const NavItem = ({ to, icon, label, isActive, badge }) => (
     </Link>
 );
 
+import usePermission from '../hooks/usePermission';
+
 const NavGroup = ({ label, items, currentPath, search }) => {
-    const fullPath = currentPath + search;
+    const fullPath = search ? currentPath + search : currentPath;
     const isGroupActive = items.some(item => currentPath === item.path || fullPath === item.path);
     const [isOpen, setIsOpen] = useState(isGroupActive);
+
+    if (items.length === 0) return null;
 
     return (
         <div className="mb-2">
@@ -58,7 +62,21 @@ const Sidebar = ({ isOpen, onClose, currentPath }) => {
     const location = useLocation();
     const [emailAccounts, setEmailAccounts] = useState([]);
 
+    const canViewUsers = usePermission('VIEW_USERS');
+    const canViewSubcontractors = usePermission('VIEW_SUBCONTRACTORS');
+    const canViewCustomers = usePermission('VIEW_CUSTOMERS');
+    const canViewProjects = usePermission('VIEW_PROJECTS');
+    const canViewCategories = usePermission('VIEW_CATEGORIES');
+    const canViewInquiries = usePermission('VIEW_INQUIRIES');
+    const canViewSupport = usePermission('VIEW_SUPPORT');
+    const canViewEmails = usePermission('VIEW_EMAILS');
+    const canManageEmails = usePermission('MANAGE_EMAIL_ACCOUNTS');
+    const canManageApiKeys = usePermission('MANAGE_API_KEYS');
+    const canViewNotes = usePermission('VIEW_NOTES');
+    const canViewTasks = usePermission('VIEW_TASKS');
+
     const fetchAccounts = async () => {
+        if (!canViewEmails) return;
         try {
             const res = await api.get('/emails');
             setEmailAccounts(res.data.data.accounts || []);
@@ -81,7 +99,47 @@ const Sidebar = ({ isOpen, onClose, currentPath }) => {
         return () => {
             socketService.off('new_email', handleNewEmail);
         };
-    }, []);
+    }, [canViewEmails]); // Re-fetch if permission changes (rare but good practice)
+
+    const baseMenu = [
+        { path: '/dashboard', icon: 'fa-chart-line', label: 'Dashboard', show: true }, // Everyone sees Dashboard
+        { path: '/notizen', icon: 'fa-note-sticky', label: 'Notizen', show: canViewNotes },
+        { path: '/aufgaben', icon: 'fa-clipboard-list', label: 'Aufgaben', show: canViewTasks },
+        { path: '/benutzer', icon: 'fa-users-gear', label: 'Benutzer', show: canViewUsers },
+        { path: '/subunternehmer', icon: 'fa-truck-fast', label: 'Subunternehmer', show: canViewSubcontractors },
+        { path: '/kunden', icon: 'fa-users', label: 'Kunden', show: canViewCustomers },
+        { path: '/projekte', icon: 'fa-building', label: 'Projekte', show: canViewProjects },
+        { path: '/kategorien', icon: 'fa-tags', label: 'Kategorien', show: canViewCategories },
+        { path: '/anfragen', icon: 'fa-inbox', label: 'Anfragen', show: canViewInquiries },
+        { path: '/support', icon: 'fa-headset', label: 'Support', show: canViewSupport }
+    ].filter(item => item.show);
+
+    let emailMenuItems = [];
+    if (canViewEmails) {
+        if (canManageEmails) {
+            emailMenuItems.push({ path: '/settings/email-accounts', icon: 'fa-cogs', label: 'Einstellungen' });
+        }
+        emailMenuItems.push({ 
+            path: '/email-messages', 
+            icon: 'fa-inbox', 
+            label: 'Alle Nachrichten',
+            badge: emailAccounts.reduce((sum, acc) => sum + (acc.unread_count || 0), 0) || null
+        });
+        emailAccounts.forEach(acc => {
+            emailMenuItems.push({
+                path: `/email-messages?account=${encodeURIComponent(acc.email)}`,
+                icon: 'fa-at',
+                label: acc.email,
+                badge: acc.unread_count > 0 ? acc.unread_count : null
+            });
+        });
+    }
+
+    const apiSettingsItems = [];
+    if (canManageApiKeys) {
+        apiSettingsItems.push({ path: '/settings/api-keys', icon: 'fa-key', label: 'API-Schlüssel' });
+        apiSettingsItems.push({ path: '/settings/api-integration', icon: 'fa-code', label: 'API Integration' });
+    }
 
     const sidebarItems = (
         <>
@@ -103,18 +161,7 @@ const Sidebar = ({ isOpen, onClose, currentPath }) => {
                     Hauptmenü
                 </div>
                 <div className="flex flex-col gap-1 mb-4">
-                    { [
-                        { path: '/dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
-                        { path: '/notizen', icon: 'fa-note-sticky', label: 'Notizen' },
-                        { path: '/aufgaben', icon: 'fa-clipboard-list', label: 'Aufgaben' },
-                        { path: '/benutzer', icon: 'fa-users-gear', label: 'Benutzer' },
-                        { path: '/subunternehmer', icon: 'fa-truck-fast', label: 'Subunternehmer' },
-                        { path: '/kunden', icon: 'fa-users', label: 'Kunden' },
-                        { path: '/projekte', icon: 'fa-building', label: 'Projekte' },
-                        { path: '/kategorien', icon: 'fa-tags', label: 'Kategorien' },
-                        { path: '/anfragen', icon: 'fa-inbox', label: 'Anfragen' },
-                        { path: '/support', icon: 'fa-headset', label: 'Support' }
-                    ].map(route => (
+                    {baseMenu.map(route => (
                         <NavItem
                             key={route.path}
                             to={route.path}
@@ -126,36 +173,20 @@ const Sidebar = ({ isOpen, onClose, currentPath }) => {
                 </div>
 
                 {/* E-Mail System */}
-                <NavGroup 
-                    label="E-Mail System" 
-                    items={[
-                        { path: '/emails', icon: 'fa-envelope-open-text', label: 'Konten' },
-                        { 
-                            path: '/email-messages', 
-                            icon: 'fa-inbox', 
-                            label: 'Alle Nachrichten',
-                            badge: emailAccounts.reduce((sum, acc) => sum + (acc.unread_count || 0), 0) || null
-                        },
-                        ...emailAccounts.map(acc => ({
-                            path: `/email-messages?account=${encodeURIComponent(acc.email)}`,
-                            icon: 'fa-at',
-                            label: acc.email,
-                            badge: acc.unread_count > 0 ? acc.unread_count : null
-                        }))
-                    ]} 
-                    currentPath={currentPath} 
-                    search={location.search}
-                />
+                {canViewEmails && emailMenuItems.length > 0 && (
+                    <NavGroup 
+                        label="E-Mail System" 
+                        items={emailMenuItems} 
+                        currentPath={currentPath} 
+                        search={location.search}
+                    />
+                )}
 
                 {/* API Settings */}
-                {(user?.role?.name?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
+                {canManageApiKeys && apiSettingsItems.length > 0 && (
                     <NavGroup 
                         label="System & API" 
-                        items={[
-                            { path: '/settings/email-api', icon: 'fa-envelope', label: 'E-Mail API' },
-                            { path: '/settings/api-keys', icon: 'fa-key', label: 'API-Schlüssel' },
-                            { path: '/settings/api-integration', icon: 'fa-code', label: 'API Integration' }
-                        ]} 
+                        items={apiSettingsItems} 
                         currentPath={currentPath} 
                     />
                 )}

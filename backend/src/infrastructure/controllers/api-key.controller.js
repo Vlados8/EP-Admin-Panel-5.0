@@ -38,7 +38,7 @@ exports.getAllKeys = async (req, res, next) => {
 // Создать новый API ключ
 exports.createKey = async (req, res, next) => {
     try {
-        const { name_or_domain, company_id } = req.body;
+    const { name_or_domain, company_id, allowed_category_ids } = req.body;
         
         if (!name_or_domain) {
             return next(new AppError('Поле name_or_domain (Домен или название) обязательно', 400));
@@ -63,7 +63,8 @@ exports.createKey = async (req, res, next) => {
             created_by_id: req.user?.id || null, // Если пользователь авторизован
             key_hash: hashedKey,
             name_or_domain: name_or_domain,
-            is_active: true
+            is_active: true,
+            allowed_category_ids: allowed_category_ids || null
         });
 
         // Важно: возвращаем rawKey ТОЛЬКО ОДИН РАЗ при создании!
@@ -135,3 +136,41 @@ exports.deleteKey = async (req, res, next) => {
         next(err);
     }
 }
+
+// Обновить ключ
+exports.updateKey = async (req, res, next) => {
+    try {
+        const { name_or_domain, is_active, allowed_category_ids } = req.body;
+        const key = await ApiKey.findByPk(req.params.id);
+
+        if (!key) {
+            return next(new AppError('API ключ не найден', 404));
+        }
+
+        // Проверка прав
+        if (req.user?.company_id && key.company_id !== req.user.company_id) {
+            return next(new AppError('У вас нет прав на редактирование этого ключа', 403));
+        }
+
+        if (name_or_domain !== undefined) key.name_or_domain = name_or_domain;
+        if (is_active !== undefined) key.is_active = is_active;
+        if (allowed_category_ids !== undefined) key.allowed_category_ids = allowed_category_ids;
+
+        await key.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                apiKey: {
+                    id: key.id,
+                    name_or_domain: key.name_or_domain,
+                    is_active: key.is_active,
+                    allowed_category_ids: key.allowed_category_ids,
+                    updatedAt: key.updatedAt
+                }
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};

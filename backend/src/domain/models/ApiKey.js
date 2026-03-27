@@ -42,6 +42,11 @@ const ApiKey = sequelize.define('ApiKey', {
     last_used_ip: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    allowed_category_ids: {
+        // Список ID категорий, к которым разрешен доступ (если null - разрешены все)
+        type: DataTypes.JSON,
+        allowNull: true
     }
 }, {
     tableName: 'api_keys',

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Subcontractors = () => {
     const { user: currentUser } = useSelector(state => state.auth);
     const [subcontractors, setSubcontractors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -26,7 +28,7 @@ const Subcontractors = () => {
     });
 
     const currentUserRole = currentUser?.role?.name || currentUser?.role;
-    const canManageSubcontractors = currentUserRole !== 'Worker';
+    const canManageSubcontractors = usePermission('MANAGE_SUBCONTRACTORS');
 
     const fetchSubcontractors = async () => {
         try {

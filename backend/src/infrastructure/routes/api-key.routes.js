@@ -22,6 +22,7 @@ router
 
 router
     .route('/:id')
+    .patch(apiKeyController.updateKey)
     .delete(apiKeyController.deleteKey); // Жесткое удаление
 
 router

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Users = () => {
-    const { user: currentUser } = useSelector(state => state.auth);
-    const canManageUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Büro';
+    const canManageUsers = usePermission('MANAGE_USERS');
 
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
@@ -178,12 +178,20 @@ const Users = () => {
         <div className="animate-[fadeIn_0.4s_ease-out_forwards]">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
-                    <h2 className="text-xl font-semibold mb-1">Benutzerverwaltung</h2>
-                    <p className="hidden md:block text-gray-400 text-sm">
-                        Hierarchie: Worker <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Gruppenleiter
-                        <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Projektleiter
-                        <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Büro / Admin
-                    </p>
+                    <h2 className="text-xl font-semibold mb-1">
+                        {canManageUsers ? 'Benutzerverwaltung' : 'Mitarbeiter & Kontakte'}
+                    </h2>
+                    {canManageUsers ? (
+                        <p className="hidden md:block text-gray-400 text-sm">
+                            Hierarchie: Worker <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Gruppenleiter
+                            <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Projektleiter
+                            <i className="fa-solid fa-arrow-right text-xs mx-1"></i> Büro / Admin
+                        </p>
+                    ) : (
+                        <p className="text-gray-400 text-sm italic">
+                            Alle Kontakte Ihres Unternehmens im Überblick.
+                        </p>
+                    )}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     <div className="relative flex-grow">

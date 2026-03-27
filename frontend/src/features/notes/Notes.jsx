@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Notes = () => {
     const { user: currentUser } = useSelector(state => state.auth);
@@ -18,8 +19,11 @@ const Notes = () => {
         content: '',
         date: '',
         color: 'blue',
-        project_id: ''
+        project_id: '',
     });
+
+    // Everyone can manage their own notes as per backend logic
+    const canManageNotes = usePermission('MANAGE_NOTES');
 
     const resetForm = () => {
         setFormData({ title: '', content: '', date: '', color: 'blue', project_id: '' });
@@ -29,7 +33,7 @@ const Notes = () => {
         try {
             const [notesRes, projectsRes] = await Promise.all([
                 api.get('/notes'),
-                api.get('/projects')
+                api.get('/projects'),
             ]);
             setNotes(notesRes.data.data.notes);
             setProjects(projectsRes.data.data?.projects || projectsRes.data || []);

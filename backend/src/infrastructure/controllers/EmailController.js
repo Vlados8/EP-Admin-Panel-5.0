@@ -7,6 +7,7 @@ const Mailgun = require('mailgun.js');
 const { EmailAccount, Email, Attachment, Company, User, Client } = require('../../domain/models');
 const { emitToCompany } = require('../websocket');
 const AppError = require('../../utils/appError');
+const { hasPermission } = require('../../utils/permissions');
 
 // Initialize Mailgun
 const mailgun = new Mailgun(FormData);
@@ -27,16 +28,6 @@ const extractEmail = (str) => {
     if (!str) return '';
     const match = str.match(/<([^>]+)>/);
     return match ? match[1].toLowerCase().trim() : str.toLowerCase().trim();
-};
-
-/**
- * Robust Admin check
- */
-const isAdmin = (user) => {
-    if (!user || !user.role) return false;
-    const role = user.role;
-    if (typeof role === 'string') return role.toLowerCase() === 'admin';
-    return role.name?.toLowerCase() === 'admin';
 };
 
 /**
@@ -111,8 +102,25 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
 exports.getEmailAccounts = async (req, res, next) => {
     try {
         const company_id = req.user.company_id;
+        
+        let accountWhere = { company_id };
+        const userRole = req.user.role?.name || req.user.role;
+        if (!hasPermission(req.user, 'MANAGE_EMAIL_ACCOUNTS')) {
+            if (userRole === 'Projektleiter') {
+                // Projektleiter sees personal + shared
+                accountWhere[Op.or] = [
+                    { user_id: req.user.id },
+                    { is_shared: true }
+                ];
+            } else {
+                // Workers and Gruppenleiter see ONLY personal
+                accountWhere.user_id = req.user.id;
+                accountWhere.is_shared = false;
+            }
+        }
+
         const accounts = await EmailAccount.findAll({
-            where: { company_id },
+            where: accountWhere,
             include: [
                 { model: User, as: 'assigned_user', attributes: ['id', 'name', 'email'] }
             ],
@@ -642,11 +650,19 @@ exports.getEmailMessages = async (req, res, next) => {
         
         // 1. Get allowed email accounts for this user
         const accountWhere = { company_id: companyId };
-        if (!isAdmin(req.user)) {
-            accountWhere[Op.or] = [
-                { user_id: req.user.id },
-                { is_shared: true }
-            ];
+        const userRole = req.user.role?.name || req.user.role;
+        if (!hasPermission(req.user, 'MANAGE_EMAIL_ACCOUNTS')) {
+            if (userRole === 'Projektleiter') {
+                // Projektleiter sees personal + shared
+                accountWhere[Op.or] = [
+                    { user_id: req.user.id },
+                    { is_shared: true }
+                ];
+            } else {
+                // Workers and Gruppenleiter see ONLY personal
+                accountWhere.user_id = req.user.id;
+                accountWhere.is_shared = false;
+            }
         }
         
         const accounts = await EmailAccount.findAll({ where: accountWhere });
@@ -662,7 +678,7 @@ exports.getEmailMessages = async (req, res, next) => {
         // 2. Fetch emails involving these accounts
         const whereClause = { company_id: companyId };
         
-        if (!isAdmin(req.user)) {
+        if (!hasPermission(req.user, 'MANAGE_EMAIL_ACCOUNTS')) {
             whereClause[Op.or] = [
                 { sender_email: { [Op.in]: allowedEmails } },
                 { recipient_email: { [Op.in]: allowedEmails } }

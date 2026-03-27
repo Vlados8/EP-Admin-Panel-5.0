@@ -3,11 +3,28 @@ const AppError = require('../../utils/appError');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+const { hasPermission } = require('../../utils/permissions');
 
 // Get all tasks
 exports.getTasks = async (req, res, next) => {
     try {
+        const whereClause = {};
+        if (!hasPermission(req.user, 'MANAGE_USERS')) {
+            const role = req.user.role?.name || req.user.role;
+            if (role === 'Worker') {
+                whereClause.assigned_to_id = req.user.id;
+            } else if (role === 'Gruppenleiter' || role === 'Projektleiter') {
+                whereClause[Op.or] = [
+                    { assigned_to_id: req.user.id },
+                    { created_by_id: req.user.id }
+                ];
+            } else {
+                whereClause.assigned_to_id = req.user.id; // Fallback
+            }
+        }
+
         const tasks = await Task.findAll({
+            where: whereClause,
             include: [
                 { model: User, as: 'assignee', attributes: ['id', 'name'] },
                 { model: User, as: 'creator', attributes: ['id', 'name'] },
@@ -97,6 +114,15 @@ exports.updateTask = async (req, res, next) => {
         const task = await Task.findByPk(req.params.id);
         if (!task) return next(new AppError('Aufgabe nicht gefunden', 404));
 
+        if (!hasPermission(req.user, 'MANAGE_USERS')) {
+            const role = req.user.role?.name || req.user.role;
+            if (role === 'Worker' && task.assigned_to_id !== req.user.id) {
+                 return next(new AppError('Keine Berechtigung zum Bearbeiten dieser Aufgabe', 403));
+            } else if ((role === 'Gruppenleiter' || role === 'Projektleiter') && task.created_by_id !== req.user.id && task.assigned_to_id !== req.user.id) {
+                 return next(new AppError('Keine Berechtigung zum Bearbeiten dieser Aufgabe', 403));
+            }
+        }
+
         const { status, title, description, assigned_to_id, project_id, due_date } = req.body;
 
         if (status !== undefined) task.status = status;
@@ -151,6 +177,15 @@ exports.deleteTask = async (req, res, next) => {
     try {
         const task = await Task.findByPk(req.params.id);
         if (!task) return next(new AppError('Aufgabe nicht gefunden', 404));
+
+        if (!hasPermission(req.user, 'MANAGE_USERS')) {
+            const role = req.user.role?.name || req.user.role;
+            if (role === 'Worker') {
+                 return next(new AppError('Keine Berechtigung zum Löschen von Aufgaben', 403));
+            } else if ((role === 'Gruppenleiter' || role === 'Projektleiter') && task.created_by_id !== req.user.id) {
+                 return next(new AppError('Nur der Ersteller kann diese Aufgabe löschen', 403));
+            }
+        }
 
         const taskId = String(task.id);
         await task.destroy();

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Emails = () => {
+    const canManageEmails = usePermission('MANAGE_EMAIL_ACCOUNTS');
+
     const [accounts, setAccounts] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -19,6 +23,7 @@ const Emails = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
+        if (!canManageEmails) return;
         const loadInitialData = async () => {
             setLoading(true);
             await Promise.allSettled([
@@ -157,6 +162,10 @@ const Emails = () => {
             alert('Fehler beim Löschen des Kontos.');
         }
     };
+
+    if (!canManageEmails) {
+        return <Navigate to="/email-messages" replace />;
+    }
 
     return (
         <div className="animate-[fadeIn_0.4s_ease-out_forwards] p-6">

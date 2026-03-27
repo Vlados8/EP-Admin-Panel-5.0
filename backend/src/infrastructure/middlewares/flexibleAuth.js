@@ -65,6 +65,7 @@ module.exports = async (req, res, next) => {
                 await apiKeyRecord.save();
 
                 req.source_website = apiKeyRecord.name_or_domain;
+                req.apiKey = apiKeyRecord; // Сохраняем объект ключа для дальнейшей фильтрации
                 req.body.company_id = apiKeyRecord.company_id;
                 return next();
             } else {

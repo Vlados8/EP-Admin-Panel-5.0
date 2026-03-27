@@ -4,16 +4,32 @@ import { toast } from 'react-hot-toast';
 
 const ApiKeys = () => {
     const [keys, setKeys] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newKeyName, setNewKeyName] = useState('');
     const [generatedKey, setGeneratedKey] = useState(null);
     const [copied, setCopied] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingKey, setEditingKey] = useState(null);
+    const [editKeyName, setEditKeyName] = useState('');
+    const [editSelectedCategoryIds, setEditSelectedCategoryIds] = useState([]);
 
     useEffect(() => {
         fetchKeys();
+        fetchCategories();
     }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await api.get('/categories');
+            setCategories(response.data.data.categories || []);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
 
     const fetchKeys = async () => {
         try {
@@ -35,10 +51,14 @@ const ApiKeys = () => {
         }
 
         try {
-            const response = await api.post('/api-keys', { name_or_domain: newKeyName });
+            const response = await api.post('/api-keys', { 
+                name_or_domain: newKeyName,
+                allowed_category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : null
+            });
             setGeneratedKey(response.data.data.apiKey);
             toast.success('API-Schlüssel erfolgreich erstellt!');
             setNewKeyName(''); // Reset input
+            setSelectedCategoryIds([]); // Reset selection
             fetchKeys(); // Refresh list to show the new key record
         } catch (error) {
             toast.error(error.response?.data?.message || 'Fehler beim Erstellen des Schlüssels');
@@ -74,6 +94,40 @@ const ApiKeys = () => {
         }
     };
 
+    const handleEdit = (key) => {
+        setEditingKey(key);
+        setEditKeyName(key.name_or_domain || '');
+        
+        let allowedIds = key.allowed_category_ids;
+        if (typeof allowedIds === 'string') {
+            try { allowedIds = JSON.parse(allowedIds); } catch (e) { allowedIds = []; }
+        }
+        setEditSelectedCategoryIds(Array.isArray(allowedIds) ? allowedIds : []);
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdateKey = async (e) => {
+        e.preventDefault();
+        if (!editKeyName.trim()) {
+            toast.error('Bitte geben Sie einen Namen oder eine Domain ein');
+            return;
+        }
+
+        try {
+            await api.patch(`/api-keys/${editingKey.id}`, {
+                name_or_domain: editKeyName,
+                allowed_category_ids: editSelectedCategoryIds.length > 0 ? editSelectedCategoryIds : null
+            });
+            toast.success('API-Schlüssel aktualisiert');
+            setIsEditModalOpen(false);
+            setEditingKey(null);
+            fetchKeys();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Fehler beim Aktualisieren des Schlüssels');
+            console.error('Error updating API key:', error);
+        }
+    };
+
     const copyToClipboard = () => {
         if (generatedKey) {
             navigator.clipboard.writeText(generatedKey);
@@ -87,6 +141,7 @@ const ApiKeys = () => {
         setIsModalOpen(false);
         setGeneratedKey(null);
         setNewKeyName('');
+        setSelectedCategoryIds([]);
     }
     
     const displayedKeys = (Array.isArray(keys) ? keys : []).filter(k => {
@@ -127,6 +182,7 @@ const ApiKeys = () => {
                         <thead className="bg-white/5 border-b border-white/10">
                             <tr>
                                 <th className="p-4 text-gray-200">Name / Domain</th>
+                                <th className="p-4 text-gray-200">Zulässige Kategorien</th>
                                 <th className="p-4 text-gray-200">Status</th>
                                 <th className="p-4 text-gray-200">Erstellt am</th>
                                 <th className="p-4 text-gray-200">Zuletzt verwendet</th>
@@ -149,6 +205,29 @@ const ApiKeys = () => {
                                             {k.name_or_domain}
                                         </td>
                                         <td className="p-4">
+                                            {(() => {
+                                                let allowedIds = k.allowed_category_ids;
+                                                if (typeof allowedIds === 'string') {
+                                                    try { allowedIds = JSON.parse(allowedIds); } catch (e) { allowedIds = []; }
+                                                }
+                                                if (Array.isArray(allowedIds) && allowedIds.length > 0) {
+                                                    return (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {allowedIds.map(id => {
+                                                                const cat = categories.find(c => c.id === id);
+                                                                return cat ? (
+                                                                    <span key={id} className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[10px]">
+                                                                        {cat.name}
+                                                                    </span>
+                                                                ) : null;
+                                                            })}
+                                                        </div>
+                                                    );
+                                                }
+                                                return <span className="text-gray-500 italic text-xs">Alle</span>;
+                                            })()}
+                                        </td>
+                                        <td className="p-4">
                                             <span className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1.5 w-max ${k.is_active ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                                                 <span className={`w-1.5 h-1.5 gap-2 rounded-full ${k.is_active ? 'bg-green-400' : 'bg-red-400'}`}></span>
                                                 {k.is_active ? 'Aktiv' : 'Widerrufen'}
@@ -162,6 +241,13 @@ const ApiKeys = () => {
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(k)}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                                                    title="Bearbeiten"
+                                                >
+                                                    <i className="fa-solid fa-pencil"></i>
+                                                </button>
                                                 {k.is_active && (
                                                     <button
                                                         onClick={() => handleRevoke(k.id)}
@@ -223,6 +309,39 @@ const ApiKeys = () => {
                                         autoFocus
                                     />
                                 </div>
+
+                                {/* Category Selection */}
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-200 mb-2">
+                                        Kategorien einschränken (Optional)
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 bg-white/5 border border-white/10 rounded-xl scrollbar-thin scrollbar-thumb-white/10">
+                                        {categories.map(cat => (
+                                            <label key={cat.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group">
+                                                <div className="relative flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="peer appearance-none w-5 h-5 border border-white/20 rounded bg-white/5 checked:bg-blue-600 checked:border-blue-500 transition-all cursor-pointer"
+                                                        checked={selectedCategoryIds.includes(cat.id)}
+                                                        onChange={() => {
+                                                            setSelectedCategoryIds(prev => 
+                                                                prev.includes(cat.id) 
+                                                                    ? prev.filter(id => id !== cat.id)
+                                                                    : [...prev, cat.id]
+                                                            );
+                                                        }}
+                                                    />
+                                                    <i className="fa-solid fa-check absolute text-[10px] text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
+                                                </div>
+                                                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{cat.name}</span>
+                                            </label>
+                                        ))}
+                                        {categories.length === 0 && (
+                                            <p className="text-xs text-gray-500 col-span-2 py-2 italic text-center">Keine Kategorien vorhanden.</p>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 mt-2 italic">Standardmäßig hat der Schlüssel Zugriff auf ALLE Kategorien.</p>
+                                </div>
                                 
                                 <div className="flex justify-end gap-3 pt-2 border-t border-white/10">
                                     <button
@@ -276,6 +395,86 @@ const ApiKeys = () => {
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal for Editing API Key */}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4 overflow-y-auto">
+                    <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out] my-8">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
+                            <h2 className="text-xl font-semibold text-white flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30 text-blue-400">
+                                    <i className="fa-solid fa-pencil"></i>
+                                </div>
+                                API-Schlüssel bearbeiten
+                            </h2>
+                            <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateKey} className="p-6">
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-200 mb-1">
+                                    Name / Domain *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editKeyName}
+                                    onChange={(e) => setEditKeyName(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:bg-white/10 transition-all"
+                                    placeholder="Name eingeben..."
+                                />
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-200 mb-2">
+                                    Zulässige Kategorien
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 bg-white/5 border border-white/10 rounded-xl scrollbar-thin scrollbar-thumb-white/10">
+                                    {categories.map(cat => (
+                                        <label key={cat.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group">
+                                            <div className="relative flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    className="peer appearance-none w-5 h-5 border border-white/20 rounded bg-white/5 checked:bg-blue-600 checked:border-blue-500 transition-all cursor-pointer"
+                                                    checked={editSelectedCategoryIds.includes(cat.id)}
+                                                    onChange={() => {
+                                                        setEditSelectedCategoryIds(prev => 
+                                                            prev.includes(cat.id) 
+                                                                ? prev.filter(id => id !== cat.id)
+                                                                : [...prev, cat.id]
+                                                        );
+                                                    }}
+                                                />
+                                                <i className="fa-solid fa-check absolute text-[10px] text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
+                                            </div>
+                                            <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{cat.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-2 italic text-center">Standardmäßig (wenn keine gewählt) hat der Schlüssel Zugriff auf ALLE Kategorien.</p>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3 pt-2 border-t border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/10"
+                                >
+                                    Abbrechen
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
+                                >
+                                    Speichern
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

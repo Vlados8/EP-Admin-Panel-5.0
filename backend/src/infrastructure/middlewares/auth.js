@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User, Role, Company } = require('../../domain/models');
 const AppError = require('../../utils/appError');
+const { hasPermission } = require('../../utils/permissions');
 
 /**
  * Middleware для защиты маршрутов с использованием JWT.
@@ -56,8 +57,22 @@ exports.restrictTo = (...roles) => {
     const lowerRoles = roles.map(r => r.toLowerCase());
     return (req, res, next) => {
         // Проверка: есть ли у пользователя роль и входит ли её имя в список разрешенных (в нижнем регистре)
-        if (!req.user.role || !lowerRoles.includes(req.user.role.name.toLowerCase())) {
+        if (!req.user.role || !lowerRoles.includes((req.user.role.name || req.user.role).toLowerCase())) {
             return next(new AppError('У вас нет прав на выполнение этого действия.', 403));
+        }
+        next();
+    };
+};
+
+/**
+ * Middleware для защиты маршрутов на основе прав доступа (PERMISSIONS).
+ * @param {string} permission - Ключ права доступа (например, 'MANAGE_USERS')
+ */
+exports.checkPermission = (permission) => {
+    return (req, res, next) => {
+        // hasPermission сам понимает логику 'Admin'
+        if (!hasPermission(req.user, permission)) {
+            return next(new AppError(`У вас нет прав (${permission}) на выполнение этого действия.`, 403));
         }
         next();
     };

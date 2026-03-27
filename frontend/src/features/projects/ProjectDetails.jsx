@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { useDispatch } from 'react-redux';
 import { setBreadcrumbOverride } from '../../store/slices/uiSlice';
 import ProjectEditModal from './ProjectEditModal';
 import ProjectFileManager from './ProjectFileManager';
+import usePermission from '../../hooks/usePermission';
 
 const ProjectDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const { user: currentUser } = useSelector(state => state.auth);
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
+    const canEditProject = usePermission('MANAGE_PROJECTS');
+    const canDeleteProject = usePermission('MANAGE_USERS'); // Proxy for Admin/Office
+    const canManageStages = usePermission('MANAGE_PROJECTS'); // PL and above can manage all stages
+    const isWorker = currentUser?.role?.name === 'Worker' || currentUser?.role === 'Worker';
     const [activeTab, setActiveTab] = useState('info'); // 'info', 'steps', or 'files'
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAddingTask, setIsAddingTask] = useState(false);
@@ -98,16 +105,22 @@ const ProjectDetails = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            if (res.data?.status === 'success') {
+            if (res.data?.status === 'success' && res.data.data?.stage) {
                 const newStage = res.data.data.stage;
-                setProject(prev => ({
-                    ...prev,
-                    stages: [...(prev.stages || []), newStage]
-                }));
+                setProject(prev => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        stages: [...(prev.stages || []), newStage]
+                    };
+                });
                 setNewTaskTitle('');
                 setNewTaskDescription('');
                 setSelectedFiles([]);
                 setIsAddingTask(false);
+            } else {
+                console.error('Invalid response from server:', res.data);
+                alert('Fehler beim Hinzufügen des Arbeitsschritts: Ungültige Server-Antwort');
             }
         } catch (error) {
             console.error('Error adding stage:', error);
@@ -239,14 +252,16 @@ const ProjectDetails = () => {
                         )}
                     </div>
                 </div>
-
-                <button
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm font-medium"
-                >
-                    <i className="fa-solid fa-pen-to-square"></i>
-                    Projekt bearbeiten
-                </button>
+                
+                {canEditProject && (
+                    <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm font-medium"
+                    >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                        Projekt bearbeiten
+                    </button>
+                )}
             </div>
 
             {/* Tabs Navigation */}
@@ -542,25 +557,26 @@ const ProjectDetails = () => {
                         </div>
                     </div>
 
-                    {/* Danger Zone: Project Deletion */}
-                    <div className="glass-card rounded-2xl p-6 border-red-500/20 bg-red-500/5 mt-6">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div>
-                                <h4 className="text-sm font-semibold text-red-500 mb-1 flex items-center gap-2">
-                                    <i className="fa-solid fa-triangle-exclamation"></i> Gefahrenzone
-                                </h4>
-                                <p className="text-xs text-red-400/80">
-                                    Das Löschen des Projekts entfernt alle zugehörigen Daten, Etappen, Antworten und Dateien unwiderruflich von den Servern.
-                                </p>
+                    {canDeleteProject && (
+                        <div className="glass-card rounded-2xl p-6 border-red-500/20 bg-red-500/5 mt-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-red-500 mb-1 flex items-center gap-2">
+                                        <i className="fa-solid fa-triangle-exclamation"></i> Gefahrenzone
+                                    </h4>
+                                    <p className="text-xs text-red-400/80">
+                                        Das Löschen des Projekts entfernt alle zugehörigen Daten, Etappen, Antworten und Dateien unwiderruflich von den Servern.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleDeleteProject}
+                                    className="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] whitespace-nowrap flex items-center gap-2"
+                                >
+                                    <i className="fa-solid fa-trash-can"></i> Projekt löschen
+                                </button>
                             </div>
-                            <button
-                                onClick={handleDeleteProject}
-                                className="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] whitespace-nowrap flex items-center gap-2"
-                            >
-                                <i className="fa-solid fa-trash-can"></i> Projekt löschen
-                            </button>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -644,9 +660,12 @@ const ProjectDetails = () => {
 
                         <div className="space-y-4">
                             {project.stages?.length > 0 ? (
-                                [...project.stages].sort((a, b) => a.id - b.id).map((task, idx) => (
-                                    <div
-                                        key={task.id}
+                                [...project.stages]
+                                    .filter(task => !!task)
+                                    .sort((a, b) => (a.id || 0) - (b.id || 0))
+                                    .map((task, idx) => (
+                                        <div
+                                            key={task.id || idx}
                                         className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row items-stretch sm:items-center gap-4 group ${task.status === 'Erledigt' ? 'bg-emerald-500/5 border-emerald-500/20 opacity-70' : 'bg-white/5 border-white/10 hover:bg-white/[0.07]'}`}
                                     >
                                         <div className="flex items-center gap-4">
@@ -654,14 +673,16 @@ const ProjectDetails = () => {
                                                 {idx + 1}
                                             </div>
                                             {/* Mobile Actions: Show always or on group hover */}
-                                            <div className="flex sm:hidden items-center gap-4 ml-auto">
-                                                <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors p-2">
-                                                    <i className="fa-solid fa-pen-to-square"></i>
-                                                </button>
-                                                <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors p-2">
-                                                    <i className="fa-solid fa-trash"></i>
-                                                </button>
-                                            </div>
+                                            {(canManageStages || task.creator?.id === currentUser.id) && (
+                                                <div className="flex sm:hidden items-center gap-4 ml-auto">
+                                                    <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors p-2">
+                                                        <i className="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                    <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors p-2">
+                                                        <i className="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
@@ -797,14 +818,16 @@ const ProjectDetails = () => {
 
                                         <div className="flex items-center justify-between sm:justify-end gap-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5 mt-2 sm:mt-0">
                                             {/* Desktop Actions: Hidden on mobile, show on group hover */}
-                                            <div className="hidden sm:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors">
-                                                    <i className="fa-solid fa-pen-to-square"></i>
-                                                </button>
-                                                <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors">
-                                                    <i className="fa-solid fa-trash"></i>
-                                                </button>
-                                            </div>
+                                            {(canManageStages || task.creator?.id === currentUser.id) && (
+                                                <div className="hidden sm:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleStartEditTask(task)} className="text-gray-400 hover:text-blue-400 transition-colors">
+                                                        <i className="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                    <button onClick={() => handleDeleteTask(task.id)} className="text-gray-400 hover:text-red-400 transition-colors">
+                                                        <i className="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            )}
 
                                             <button
                                                 onClick={() => toggleTaskStatus(task)}

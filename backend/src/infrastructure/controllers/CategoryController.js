@@ -1,14 +1,21 @@
 const { Category, Subcategory, Question, Answer, Company } = require('../../domain/models');
+const { Op } = require('sequelize');
 const AppError = require('../../utils/appError');
 
 exports.getAllCategories = async (req, res, next) => {
     try {
         const whereClause = {};
-        // Removed strict company_id filtering to show all categories as requested by user
-        // const cid = (req.user && req.user.company_id) || req.body.company_id || req.query.company_id;
-        // if (cid) {
-        //     whereClause.company_id = cid;
-        // }
+
+        // Если запрос идет через API-ключ, фильтруем по разрешенным категориям (если они указаны)
+        let allowedIds = req.apiKey && req.apiKey.allowed_category_ids;
+        if (allowedIds) {
+            if (typeof allowedIds === 'string') {
+                try { allowedIds = JSON.parse(allowedIds); } catch (e) { allowedIds = null; }
+            }
+            if (Array.isArray(allowedIds) && allowedIds.length > 0) {
+                whereClause.id = { [Op.in]: allowedIds };
+            }
+        }
 
         const categories = await Category.findAll({
             where: whereClause,

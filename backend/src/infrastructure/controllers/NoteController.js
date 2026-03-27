@@ -1,10 +1,15 @@
 const { Note, User, Project } = require('../../domain/models');
 const AppError = require('../../utils/appError');
+const { hasPermission } = require('../../utils/permissions');
 
 // Get all notes, potentially filtered by date or month
 exports.getNotes = async (req, res, next) => {
     try {
+        const whereClause = {};
+        whereClause.user_id = req.user.id;
+
         const notes = await Note.findAll({
+            where: whereClause,
             include: [
                 {
                     model: User,
@@ -36,8 +41,7 @@ exports.createNote = async (req, res, next) => {
     try {
         const { title, content, date, color, project_id } = req.body;
 
-        // TODO: Replace with actual auth middleware req.user.id
-        const user_id = req.user ? req.user.id : (await User.findOne()).id;
+        let user_id = req.user.id;
 
         if (!title || !content || !date) {
             return next(new AppError('Bitte füllen Sie Titel, Inhalt und Datum aus', 400));
@@ -78,7 +82,10 @@ exports.deleteNote = async (req, res, next) => {
             return next(new AppError('Notiz nicht gefunden', 404));
         }
 
-        // Only logic or admin can delete. For now allow logic.
+        if (note.user_id !== req.user.id) {
+            return next(new AppError('Keine Berechtigung zum Löschen dieser Notiz', 403));
+        }
+
         await note.destroy();
 
         res.status(204).json({
@@ -97,6 +104,10 @@ exports.updateNote = async (req, res, next) => {
 
         if (!note) {
             return next(new AppError('Notiz nicht gefunden', 404));
+        }
+
+        if (note.user_id !== req.user.id) {
+            return next(new AppError('Keine Berechtigung zum Bearbeiten dieser Notiz', 403));
         }
 
         const { isDone, title, content, color, date, project_id } = req.body;

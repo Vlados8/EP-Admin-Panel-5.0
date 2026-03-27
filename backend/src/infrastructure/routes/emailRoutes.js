@@ -30,21 +30,23 @@ const upload = multer({
 // Webhook route - MUST be before auth.protect
 router.post('/webhook', upload.any(), emailController.receiveWebhook);
 
-// All email routes below are protected and restricted to Admin/Büro and Managers
+// All email routes below are protected
 router.use(auth.protect);
-router.use(auth.restrictTo('Admin', 'Büro', 'Projektleiter', 'Gruppenleiter'));
 
-router.get('/', emailController.getEmailAccounts);
-router.get('/domain', emailController.getDomain);
-router.post('/', emailController.createEmailAccount);
-router.delete('/:id', emailController.deleteEmailAccount);
-router.get('/stats', emailController.getMailgunStats);
-router.post('/send', upload.array('attachments'), emailController.sendEmail);
-router.patch('/:id', emailController.updateEmailAccount);
+// Account Management (Only Admin/Büro)
+router.post('/', auth.checkPermission('MANAGE_EMAIL_ACCOUNTS'), emailController.createEmailAccount);
+router.delete('/:id', auth.checkPermission('MANAGE_EMAIL_ACCOUNTS'), emailController.deleteEmailAccount);
+router.patch('/:id', auth.checkPermission('MANAGE_EMAIL_ACCOUNTS'), emailController.updateEmailAccount);
+router.get('/stats', auth.checkPermission('MANAGE_EMAIL_ACCOUNTS'), emailController.getMailgunStats);
+
+// Email Viewing & Interaction (All roles with VIEW_EMAILS permission, filtered securely in the controller)
+router.get('/', auth.checkPermission('VIEW_EMAILS'), emailController.getEmailAccounts);
+router.get('/domain', auth.checkPermission('VIEW_EMAILS'), emailController.getDomain);
+router.post('/send', auth.checkPermission('VIEW_EMAILS'), upload.array('attachments'), emailController.sendEmail);
 
 // Message Management
-router.get('/messages', emailController.getEmailMessages);
-router.patch('/messages/:id/read', emailController.markAsRead);
-router.delete('/messages/:id', emailController.deleteMessage);
+router.get('/messages', auth.checkPermission('VIEW_EMAILS'), emailController.getEmailMessages);
+router.patch('/messages/:id/read', auth.checkPermission('VIEW_EMAILS'), emailController.markAsRead);
+router.delete('/messages/:id', auth.checkPermission('VIEW_EMAILS'), emailController.deleteMessage);
 
 module.exports = router;

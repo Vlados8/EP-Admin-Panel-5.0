@@ -62,9 +62,9 @@ function App() {
                     <Route path="kategorien" element={<Categories />} />
                     <Route path="anfragen" element={<Inquiries />} />
                     <Route path="support" element={<Support />} />
-                    <Route path="emails" element={<Emails />} />
                     <Route path="email-messages" element={<EmailMessages />} />
                     <Route path="settings">
+                        <Route path="email-accounts" element={<Emails />} />
                         <Route path="email-api" element={<EmailApi />} />
                         <Route path="api-keys" element={<ApiKeys />} />
                         <Route path="api-integration" element={<ApiIntegration />} />

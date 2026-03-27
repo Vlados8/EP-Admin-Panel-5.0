@@ -1,5 +1,6 @@
 const { Inquiry, InquiryAnswer, Category, Subcategory, Client, Company, Question, Project } = require('../../domain/models');
 const AppError = require('../../utils/appError');
+const { hasPermission } = require('../../utils/permissions');
 
 exports.getAllInquiries = async (req, res, next) => {
     try {
@@ -174,6 +175,10 @@ exports.updateInquiryStatus = async (req, res, next) => {
 };
 
 exports.deleteInquiry = async (req, res, next) => {
+    // Only Admin and Office can delete inquiries
+    if (!hasPermission(req.user, 'MANAGE_USERS')) { // Proxy for Admin/Office
+        return next(new AppError('Nur Administratoren können Anfragen löschen', 403));
+    }
     try {
         const inquiry = await Inquiry.findByPk(req.params.id);
         if (!inquiry) return next(new AppError('Inquiry not found', 404));

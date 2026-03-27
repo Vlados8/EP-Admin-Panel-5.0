@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import ProjectWizard from './ProjectWizard';
+import usePermission from '../../hooks/usePermission';
 
 const Projects = () => {
+    const { user: currentUser } = useSelector(state => state.auth);
     const [projects, setProjects] = useState([]);
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const canManageProjects = usePermission('MANAGE_PROJECTS');
 
     const navigate = useNavigate();
 
@@ -121,12 +125,14 @@ const Projects = () => {
                             className="bg-black/20 border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all w-full md:w-64 backdrop-blur-sm"
                         />
                     </div>
-                    <button
-                        onClick={() => setIsWizardOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:-translate-y-0.5 flex items-center gap-2 text-sm font-medium whitespace-nowrap"
-                    >
-                        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Neues Projekt
-                    </button>
+                    {canManageProjects && (
+                        <button
+                            onClick={() => setIsWizardOpen(true)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:-translate-y-0.5 flex items-center gap-2 text-sm font-medium whitespace-nowrap"
+                        >
+                            <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Neues Projekt
+                        </button>
+                    )}
                 </div>
             </div>
 

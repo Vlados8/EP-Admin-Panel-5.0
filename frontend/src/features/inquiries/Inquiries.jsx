@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 import InquiryDetailsModal from './InquiryDetailsModal';
 import ProjectCreateModal from '../projects/ProjectCreateModal';
 import ProjectWizard from '../projects/ProjectWizard';
@@ -36,9 +37,10 @@ const Inquiries = () => {
         title: '', contact_name: '', contact_email: '', contact_phone: '', location: '', notes: ''
     });
     const [checkboxSelections, setCheckboxSelections] = useState([]);
+    const [viewMode, setViewMode] = useState('board'); // 'board' or 'list'
 
-
-    const canManageInquiries = currentUser?.role?.name !== 'Worker' && currentUser?.role !== 'Worker';
+    const canManageInquiries = usePermission('MANAGE_INQUIRIES');
+    const canDeleteInquiryPerm = usePermission('MANAGE_USERS'); // Proxy for Admin/Office
 
     const fetchData = async () => {
         try {
@@ -203,7 +205,7 @@ const Inquiries = () => {
                         </div>
                     )}
                 </div>
-                {canManageInquiries && (
+                {canDeleteInquiryPerm && (
                     <button onClick={(e) => { e.stopPropagation(); deleteInquiry(inquiry.id); }} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1">
                         <i className="fa-solid fa-trash-can text-xs"></i>
                     </button>
@@ -355,8 +357,7 @@ const Inquiries = () => {
                                                             title="Details anzeigen"
                                                         >
                                                             <i className="fa-solid fa-eye"></i>
-                                                        </button>
-                                                        {canManageInquiries && (
+                                                        </button>                                                        {canDeleteInquiryPerm && (
                                                             <button
                                                                 onClick={() => deleteInquiry(inq.id)}
                                                                 className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"

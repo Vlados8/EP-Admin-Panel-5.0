@@ -294,6 +294,13 @@ if (require.main === module) {
                         await sequelize.query("ALTER TABLE support_tickets ADD COLUMN is_read BOOLEAN DEFAULT 0 AFTER source_website");
                     }
 
+                    console.log('Verifying api_keys schema...');
+                    const [apiKeyCategoryResults] = await sequelize.query("SHOW COLUMNS FROM api_keys LIKE 'allowed_category_ids'");
+                    if (apiKeyCategoryResults.length === 0) {
+                        console.log('Adding missing allowed_category_ids column to api_keys...');
+                        await sequelize.query("ALTER TABLE api_keys ADD COLUMN allowed_category_ids JSON NULL");
+                    }
+
                     console.log('Schema verification complete.');
                 } catch (schemaErr) {
                     console.warn('Non-critical: Schema fix failed (columns might already exist):', schemaErr.message);

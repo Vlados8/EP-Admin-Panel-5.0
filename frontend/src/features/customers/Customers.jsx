@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Customers = () => {
     const { user: currentUser } = useSelector(state => state.auth);
-    const [clients, setClients] = useState([]);
+    const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -25,12 +27,12 @@ const Customers = () => {
     });
 
     const currentUserRole = currentUser?.role?.name || currentUser?.role;
-    const canManageCustomers = currentUserRole !== 'Worker'; // Typically Workers cannot manage clients
+    const canManageCustomers = usePermission('MANAGE_CUSTOMERS');
 
     const fetchClients = async () => {
         try {
             const res = await api.get('/clients');
-            setClients(res.data.data.clients);
+            setCustomers(res.data.data.clients);
         } catch (error) {
             console.error('Error fetching clients:', error);
         } finally {
@@ -108,7 +110,7 @@ const Customers = () => {
         }
     };
 
-    const displayedClients = clients.filter(c => {
+    const displayedClients = customers.filter(c => {
         if (searchQuery.trim() !== '') {
             const lowerQuery = searchQuery.toLowerCase();
             return (c.name && c.name.toLowerCase().includes(lowerQuery)) ||

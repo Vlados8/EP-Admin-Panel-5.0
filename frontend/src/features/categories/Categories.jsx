@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import usePermission from '../../hooks/usePermission';
 
 const Categories = () => {
-    const { user: currentUser } = useSelector(state => state.auth);
+    // Basic States
+    const canManage = usePermission('MANAGE_CATEGORIES');
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const [expandedCats, setExpandedCats] = useState({});
     const [expandedSubcats, setExpandedSubcats] = useState({});
@@ -13,8 +15,6 @@ const Categories = () => {
 
     // Modals
     const [modalConfig, setModalConfig] = useState(null); // { type: 'category'|'subcategory'|'question'|'answer', isEdit: boolean, parentId?: number, data?: any, extraOptions?: any }
-
-    const canManage = currentUser?.role?.name !== 'Worker' && currentUser?.role !== 'Worker';
 
     const fetchCategories = async () => {
         try {
