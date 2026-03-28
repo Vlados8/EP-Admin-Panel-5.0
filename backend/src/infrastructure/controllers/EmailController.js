@@ -40,14 +40,19 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
     <style>
+        :root { color-scheme: light only; supported-color-schemes: light only; }
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; color: #333333; }
-        .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
-        .main { background-color: #ffffff; margin: 0 auto; width: 90%; max-width: 600px; border: 1px solid #dddddd; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .wrapper { width: 100%; background-color: #f5f5f5; background-image: linear-gradient(#f5f5f5, #f5f5f5); padding: 40px 0; }
+        .main { background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff); margin: 0 auto; width: 90%; max-width: 600px; border: 1px solid #dddddd; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .header { padding: 45px 20px; text-align: center; background-color: #111111; }
-        .content { padding: 60px 40px; color: #222222; line-height: 1.8; font-size: 16px; background-color: #ffffff; }
-        .footer { padding: 60px 20px; background-color: #111111; text-align: center; color: #888888; }
-        .header-logo { height: 35px; width: auto; }
+        .content { padding: 60px 40px; color: #222222; line-height: 1.8; font-size: 16px; background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff); }
+        .footer { padding: 60px 20px; background-color: #111111; text-align: center; color: #888888; font-size: 12px; }
+        .header-logo { height: 60px; width: auto; }
         .avatar-logo { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #eeeeee; vertical-align: middle; margin-right: 12px; }
         .subject-tag { color: #999999; font-size: 10px; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 25px; display: block; font-weight: bold; }
         .signature { margin-top: 40px; padding-top: 30px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; }
@@ -57,15 +62,24 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
         .website-link { color: #ffffff; text-decoration: none; font-size: 13px; display: block; margin-bottom: 25px; letter-spacing: 2px; font-weight: bold; }
         .copyright { color: #555555; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; margin-top: 25px; }
         a { color: #111111; text-decoration: underline; }
+
+        /* Gmail Dark Mode Hacks */
+        u + .body .wrapper { background-color: #f5f5f5 !important; background-image: linear-gradient(#f5f5f5, #f5f5f5) !important; }
+        u + .body .main { background-color: #ffffff !important; background-image: linear-gradient(#ffffff, #ffffff) !important; }
+        u + .body .content { background-color: #ffffff !important; background-image: linear-gradient(#ffffff, #ffffff) !important; color: #222222 !important; }
+        u + .body .subject-tag { color: #999999 !important; }
+        u + .body a { color: #111111 !important; }
+        u + .body .footer a { color: #ffffff !important; }
+        u + .body .footer-info { color: #777777 !important; }
     </style>
 </head>
-<body>
-    <div class="wrapper">
-        <div class="main">
+<body class="body">
+    <div class="wrapper" style="background-color: #f5f5f5; background-image: linear-gradient(#f5f5f5, #f5f5f5);">
+        <div class="main" style="background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff);">
             <div class="header">
                 <img src="${headerLogoUrl}" alt="Empire Premium Logo" class="header-logo">
             </div>
-            <div class="content">
+            <div class="content" style="background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff);">
                 <span class="subject-tag">Thema: ${subject}</span>
                 <div style="min-height: 200px;">
                     ${content}
@@ -74,13 +88,27 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
                     <img src="${avatarLogoUrl}" alt="EP" class="avatar-logo">
                     <div style="display: inline-block; vertical-align: middle;">
                         <p style="margin: 0; font-weight: bold; font-size: 14px; color: #111111;">${fromName}</p>
-                        <p style="margin: 0; font-size: 12px; color: #999999;">Bauunternehmer</p>
+                        <p style="margin: 0; font-size: 12px; color: #999999;">Empire Premium Bau</p>
                     </div>
                 </div>
             </div>
             <div class="footer">
                 <a href="https://www.empire-premium-bau.de" style="color: #ffffff; text-decoration: none; font-size: 14px; letter-spacing: 3px; font-weight: bold;">EMPIRE PREMIUM</a>
                 <div style="height: 1px; background-color: #222222; width: 40px; margin: 25px auto;"></div>
+                
+                <div class="footer-info" style="font-size: 9px; line-height: 2.4; color: #777777; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <div style="color: #ffffff; font-weight: bold; margin-bottom: 8px;">Empire Premium Bau GmbH</div>
+                    <div>Hastedter Heerstraße 63, 28207 Bremen</div>
+                    <div style="color: #555555; margin: 10px 0;">&bull; &bull; &bull;</div>
+                    <div>Amtsgericht Bremen &bull; HRB 40235</div>
+                    <div>Ust-ID: DE36937652</div>
+                    <div style="height: 15px;"></div>
+                    <div>
+                        <a href="mailto:info@empire-premium-bau.de" style="color: #888888; text-decoration: none;">info@empire-premium-bau.de</a>
+                    </div>
+                    <div style="color: #888888;">+49 176 61951823</div>
+                </div>
+
                 <div class="social-links">
                     <a href="https://www.instagram.com/empire_premium_bau" class="social-link">Instagram</a>
                     <a href="https://www.tiktok.com/@empire.premium.bau" class="social-link">TikTok</a>
