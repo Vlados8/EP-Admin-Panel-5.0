@@ -1,4 +1,4 @@
-const { Task, User, TaskImage, Project } = require('../../domain/models');
+const { Task, User, Project, Attachment } = require('../../domain/models');
 const AppError = require('../../utils/appError');
 const { Op } = require('sequelize');
 const fs = require('fs');
@@ -28,7 +28,7 @@ exports.getTasks = async (req, res, next) => {
             include: [
                 { model: User, as: 'assignee', attributes: ['id', 'name'] },
                 { model: User, as: 'creator', attributes: ['id', 'name'] },
-                { model: TaskImage, as: 'images' },
+                { model: Attachment, as: 'attachments' },
                 { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] }
             ],
             order: [['createdAt', 'DESC']]
@@ -69,22 +69,15 @@ exports.createTask = async (req, res, next) => {
             created_by_id
         });
 
-        // Handle uploaded images: uploads/tasks/[taskId]/
+        // Handle uploaded images: uploads/tasks/
         if (req.files && req.files.length > 0) {
-            const taskDir = path.join(__dirname, '../../../../uploads/tasks', String(newTask.id));
-
-            if (!fs.existsSync(taskDir)) {
-                fs.mkdirSync(taskDir, { recursive: true });
-            }
-
             for (const file of req.files) {
-                const uniqueFileName = `${Date.now()}_${file.originalname}`;
-                const newPath = path.join(taskDir, uniqueFileName);
-                fs.renameSync(file.path, newPath);
-
-                await TaskImage.create({
+                await Attachment.create({
                     task_id: newTask.id,
-                    path: `/uploads/tasks/${newTask.id}/${uniqueFileName}`
+                    file_name: file.originalname,
+                    file_url: `/uploads/tasks/${file.filename}`,
+                    file_size: file.size,
+                    content_type: file.mimetype
                 });
             }
         }
@@ -93,7 +86,7 @@ exports.createTask = async (req, res, next) => {
             include: [
                 { model: User, as: 'assignee', attributes: ['id', 'name'] },
                 { model: User, as: 'creator', attributes: ['id', 'name'] },
-                { model: TaskImage, as: 'images' },
+                { model: Attachment, as: 'attachments' },
                 { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] }
             ]
         });
@@ -134,21 +127,15 @@ exports.updateTask = async (req, res, next) => {
 
         await task.save();
 
+        // Handle New File Uploads in Update
         if (req.files && req.files.length > 0) {
-            const taskDir = path.join(__dirname, '../../../../uploads/tasks', String(task.id));
-
-            if (!fs.existsSync(taskDir)) {
-                fs.mkdirSync(taskDir, { recursive: true });
-            }
-
             for (const file of req.files) {
-                const uniqueFileName = `${Date.now()}_${file.originalname}`;
-                const newPath = path.join(taskDir, uniqueFileName);
-                fs.renameSync(file.path, newPath);
-
-                await TaskImage.create({
+                await Attachment.create({
                     task_id: task.id,
-                    path: `/uploads/tasks/${task.id}/${uniqueFileName}`
+                    file_name: file.originalname,
+                    file_url: `/uploads/tasks/${file.filename}`,
+                    file_size: file.size,
+                    content_type: file.mimetype
                 });
             }
         }
@@ -157,7 +144,7 @@ exports.updateTask = async (req, res, next) => {
             include: [
                 { model: User, as: 'assignee', attributes: ['id', 'name'] },
                 { model: User, as: 'creator', attributes: ['id', 'name'] },
-                { model: TaskImage, as: 'images' },
+                { model: Attachment, as: 'attachments' },
                 { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] }
             ]
         });
@@ -175,7 +162,10 @@ exports.updateTask = async (req, res, next) => {
 // Delete task
 exports.deleteTask = async (req, res, next) => {
     try {
-        const task = await Task.findByPk(req.params.id);
+        const task = await Task.findByPk(req.params.id, {
+            include: [{ model: Attachment, as: 'attachments' }]
+        });
+
         if (!task) return next(new AppError('Aufgabe nicht gefunden', 404));
 
         if (!hasPermission(req.user, 'MANAGE_USERS')) {
@@ -187,16 +177,17 @@ exports.deleteTask = async (req, res, next) => {
             }
         }
 
-        const taskId = String(task.id);
-        await task.destroy();
-
-        // Clean up images from DB and FS
-        await TaskImage.destroy({ where: { task_id: taskId } });
-
-        const taskDir = path.join(__dirname, '../../../../uploads/tasks', taskId);
-        if (fs.existsSync(taskDir)) {
-            fs.rmSync(taskDir, { recursive: true, force: true });
+        // Delete File Attachments from disk
+        if (task.attachments && task.attachments.length > 0) {
+            task.attachments.forEach(att => {
+                const filePath = path.join(__dirname, '../../../../', att.file_url);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            });
         }
+
+        await task.destroy();
 
         res.status(204).json({
             status: 'success',

@@ -17,7 +17,6 @@ const ProjectUser = require('./ProjectUser');
 const ProjectSubcontractor = require('./ProjectSubcontractor');
 const ProjectAnswer = require('./ProjectAnswer');
 const ProjectImage = require('./ProjectImage');
-const TaskImage = require('./TaskImage');
 const ProjectStage = require('./ProjectStage');
 const ProjectStageImage = require('./ProjectStageImage');
 const SupportTicket = require('./SupportTicket');
@@ -26,6 +25,7 @@ const ApiKey = require('./ApiKey');
 const EmailAccount = require('./EmailAccount');
 const Email = require('./Email');
 const Attachment = require('./Attachment');
+const ProjectFolder = require('./ProjectFolder');
 
 // Associations
 
@@ -93,8 +93,6 @@ ProjectStage.belongsTo(User, { foreignKey: 'created_by_id', as: 'creator' });
 Task.belongsTo(User, { foreignKey: 'assigned_to_id', as: 'assignee' });
 Task.belongsTo(User, { foreignKey: 'created_by_id', as: 'creator' });
 
-Task.hasMany(TaskImage, { foreignKey: 'task_id', as: 'images' });
-TaskImage.belongsTo(Task, { foreignKey: 'task_id', as: 'task' });
 
 Task.belongsTo(Project, { foreignKey: 'project_id', as: 'project' });
 Project.hasMany(Task, { foreignKey: 'project_id', as: 'tasks' });
@@ -152,8 +150,18 @@ Attachment.belongsTo(Email, { foreignKey: 'email_id', as: 'email' });
 Inquiry.hasMany(Attachment, { foreignKey: 'inquiry_id', as: 'attachments', onDelete: 'CASCADE' });
 Attachment.belongsTo(Inquiry, { foreignKey: 'inquiry_id', as: 'inquiry' });
 
+Note.hasMany(Attachment, { foreignKey: 'note_id', as: 'attachments', onDelete: 'CASCADE' });
+Attachment.belongsTo(Note, { foreignKey: 'note_id', as: 'note' });
+
+Task.hasMany(Attachment, { foreignKey: 'task_id', as: 'attachments', onDelete: 'CASCADE' });
+Attachment.belongsTo(Task, { foreignKey: 'task_id', as: 'task' });
+
 Company.hasMany(Email, { foreignKey: 'company_id', as: 'emails' });
 Email.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
+// 10. Project Folders
+Project.hasMany(ProjectFolder, { foreignKey: 'project_id', as: 'folders', onDelete: 'CASCADE' });
+ProjectFolder.belongsTo(Project, { foreignKey: 'project_id', as: 'project' });
 
 module.exports = {
     sequelize,
@@ -175,7 +183,6 @@ module.exports = {
     ProjectSubcontractor,
     ProjectAnswer,
     ProjectImage,
-    TaskImage,
     ProjectStage,
     ProjectStageImage,
     SupportTicket,
@@ -183,5 +190,6 @@ module.exports = {
     ApiKey,
     EmailAccount,
     Email,
-    Attachment
+    Attachment,
+    ProjectFolder
 };

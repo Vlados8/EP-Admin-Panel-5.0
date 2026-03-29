@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import socketService from '../../services/socket';
 import ClientDetailsModal from '../customers/ClientDetailsModal';
+import MediaViewer from '../../components/common/MediaViewer';
 
 const EmailMessages = () => {
     const [messages, setMessages] = useState([]);
@@ -23,6 +24,17 @@ const EmailMessages = () => {
     const [emailAccounts, setEmailAccounts] = useState([]);
     const [selectedClientId, setSelectedClientId] = useState(null);
     const [selectedClientEmail, setSelectedClientEmail] = useState(null);
+
+    // Gallery State
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
+
+    const openGallery = (items, index) => {
+        setGalleryItems(items);
+        setGalleryIndex(index);
+        setIsGalleryOpen(true);
+    };
 
     useEffect(() => {
         fetchData();
@@ -281,22 +293,28 @@ const EmailMessages = () => {
                     <div className="border-t border-white/10 pt-6">
                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Anhänge ({selectedMessage.attachments.length})</h4>
                         <div className="flex flex-wrap gap-3">
-                            {selectedMessage.attachments.map((file, i) => (
-                                <a 
-                                    key={i} 
-                                    href={`${api.defaults.baseURL.replace('/api/v1', '')}${file.file_url}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition-colors cursor-pointer group"
-                                >
-                                    <i className="fa-solid fa-file-lines text-blue-400"></i>
-                                    <div>
-                                        <p className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{file.file_name}</p>
-                                        <p className="text-[10px] text-gray-500">{(file.file_size / 1024).toFixed(1)} KB</p>
+                            {selectedMessage.attachments.map((file, i) => {
+                                const isMedia = file.content_type?.startsWith('image/') || 
+                                               file.content_type?.startsWith('video/') ||
+                                               file.file_name?.match(/\.(jpg|jpeg|png|gif|webp|mp4|webm|mov)$/i);
+                                
+                                return (
+                                    <div 
+                                        key={i} 
+                                        onClick={() => isMedia ? openGallery(selectedMessage.attachments, i) : window.open(`${api.defaults.baseURL.replace('/api/v1', '')}${file.file_url}`, '_blank')}
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition-colors cursor-pointer group"
+                                    >
+                                        <i className={`fa-solid ${file.content_type?.startsWith('image/') ? 'fa-image' : file.content_type?.startsWith('video/') ? 'fa-video' : 'fa-file-lines'} text-blue-400`}></i>
+                                        <div>
+                                            <p className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{file.file_name}</p>
+                                            <p className="text-[10px] text-gray-500">
+                                                {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : '0.0 KB'}
+                                            </p>
+                                        </div>
+                                        <i className="fa-solid fa-download text-gray-600 hover:text-white transition-colors ml-2"></i>
                                     </div>
-                                    <i className="fa-solid fa-download text-gray-600 hover:text-white transition-colors ml-2"></i>
-                                </a>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -507,6 +525,13 @@ const EmailMessages = () => {
                 .glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); outline: none; transition: all 0.3s ease; }
                 .glass-input:focus { border-color: rgba(59, 130, 246, 0.5); background: rgba(255, 255, 255, 0.08); box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
             `}} />
+            {/* Media Gallery Viewer */}
+            <MediaViewer 
+                isOpen={isGalleryOpen}
+                onClose={() => setIsGalleryOpen(false)}
+                items={galleryItems}
+                initialIndex={galleryIndex}
+            />
         </div>
     );
 };

@@ -31,11 +31,11 @@ const Login = () => {
         <div className="h-screen w-screen flex items-center justify-center p-4">
             <div className="glass-panel w-full max-w-md p-8 rounded-3xl animate-[fadeIn_0.5s_ease-out_forwards]">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-400/30 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-                        <i className="fa-solid fa-helmet-safety text-blue-400 text-3xl"></i>
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-600/20 flex items-center justify-center border border-blue-500/30 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+                        <span className="text-blue-400 font-black text-xl">EP</span>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-wider text-white">Build<span className="text-blue-400">Admin</span></h1>
-                    <p className="text-slate-400 mt-2">Internes CRM System</p>
+                    <h1 className="text-3xl font-bold tracking-tighter text-white"> Empire Premium <span className="text-blue-400">Bau</span></h1>
+                    <p className="text-slate-400 mt-2 font-medium">Internes Bau-Management System</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="flex flex-col gap-5">

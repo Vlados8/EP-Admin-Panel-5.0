@@ -15,6 +15,14 @@ const Attachment = sequelize.define('Attachment', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    note_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    task_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     file_name: {
         type: DataTypes.STRING,
         allowNull: false

@@ -30,6 +30,8 @@ router.route('/:id/files')
 
 router.get('/:id/files/download', projectFileController.downloadFile);
 router.post('/:id/files/folder', projectFileController.createFolder);
+router.patch('/:id/files/permissions', projectFileController.updatePermissions);
+router.post('/:id/files/toggle-share', projectFileController.togglePublicShare);
 router.post('/:id/files/upload', projectFileController.uploadMiddleware, projectFileController.uploadFiles);
 
 module.exports = router;

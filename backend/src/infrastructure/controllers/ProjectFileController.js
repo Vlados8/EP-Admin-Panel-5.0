@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { ProjectFolder, Role, Project } = require('../../domain/models');
 
 // Base uploads directory
 const UPLOADS_DIR = path.join(__dirname, '../../../../uploads/projects');
@@ -35,6 +36,7 @@ exports.listFiles = async (req, res) => {
     try {
         const { id } = req.params;
         const subPath = req.query.path || '';
+        const userRole = req.user.role; // Assuming auth middleware sets req.user
 
         const { projectDir, targetPath } = getSecurePath(id, subPath);
         ensureProjectDir(projectDir);
@@ -43,25 +45,100 @@ exports.listFiles = async (req, res) => {
             return res.status(404).json({ error: 'Directory not found' });
         }
 
+        // 1. Check if the current folder itself is restricted
+        const folderParts = subPath.split('/').filter(Boolean);
+        const currentFolderName = folderParts[folderParts.length - 1] || '';
+        const parentPath = folderParts.slice(0, -1).join('/');
+
+        if (subPath) {
+            const currentFolderRecord = await ProjectFolder.findOne({
+                where: { project_id: id, path: parentPath, name: currentFolderName }
+            });
+
+            if (currentFolderRecord && currentFolderRecord.allowed_role_ids) {
+                const allowedRoles = Array.isArray(currentFolderRecord.allowed_role_ids) 
+                    ? currentFolderRecord.allowed_role_ids 
+                    : JSON.parse(currentFolderRecord.allowed_role_ids);
+                
+                // Admin and Büro always see everything
+                const isManagement = ['Admin', 'Büro'].includes(userRole.name);
+                
+                if (!isManagement && !allowedRoles.includes(userRole.id)) {
+                    return res.status(403).json({ error: 'Access denied: You do not have permission to view this folder' });
+                }
+            }
+        }
+
+        // 2. Read FS items
         const items = fs.readdirSync(targetPath, { withFileTypes: true });
+
+        const folderRecords = await ProjectFolder.findAll({
+            where: { project_id: id, path: subPath }
+        });
+
+        // Helper to fix garbled filenames (UTF-8 bytes misinterpreted as Latin-1)
+        const fixEncoding = (str) => {
+            if (!str) return str;
+            try {
+                // Pre-normalize common misinterpretations/normalization: 
+                // Ð/Ñ (Latin-1 D0/D1) often become Đ/đ (U+0110/U+0111)
+                const normalized = str.replace(/\u0110/g, '\u00D0').replace(/\u0111/g, '\u00D1');
+                const buf = Buffer.from(normalized, 'latin1');
+                const utf8 = buf.toString('utf8');
+                
+                // Heuristic: If it contains Cyrillic characters now and didn't before, it's fixed.
+                // Also check if it's generally valid UTF-8 without replacement chars.
+                const hasCyrillic = /[\u0400-\u04FF]/.test(utf8);
+                const isProbablyCorrect = hasCyrillic || (utf8 !== normalized && !utf8.includes('\ufffd'));
+                
+                return isProbablyCorrect ? utf8 : str;
+            } catch {
+                return str;
+            }
+        };
 
         const formattedItems = items.map(item => {
             const itemPath = path.join(targetPath, item.name);
             const stats = fs.statSync(itemPath);
             const relativePath = path.relative(UPLOADS_DIR, itemPath).replace(/\\/g, '/');
 
+            // Find metadata for this specific directory if it exists
+            const record = item.isDirectory() 
+                ? folderRecords.find(r => r.name === item.name) 
+                : null;
+
             return {
-                name: item.name,
+                name: fixEncoding(item.name),
+                physicalName: item.name, // Keep original for reference
                 isDirectory: item.isDirectory(),
                 size: stats.size,
                 createdAt: stats.birthtime,
                 updatedAt: stats.mtime,
-                url: item.isDirectory() ? null : `/uploads/projects/${relativePath}`
+                url: item.isDirectory() ? null : `/uploads/projects/${relativePath}`,
+                permissions: record ? {
+                    allowed_role_ids: record.allowed_role_ids,
+                    is_public: record.is_public,
+                    share_token: record.share_token
+                } : null
             };
         });
 
+        // 4. Filter items based on permissions
+        const filteredItems = formattedItems.filter(item => {
+            // Admin and Büro bypass filtering
+            if (['Admin', 'Büro'].includes(userRole.name)) return true;
+
+            if (!item.isDirectory || !item.permissions || !item.permissions.allowed_role_ids) return true;
+            
+            const allowedRoles = Array.isArray(item.permissions.allowed_role_ids)
+                ? item.permissions.allowed_role_ids
+                : JSON.parse(item.permissions.allowed_role_ids);
+
+            return allowedRoles.includes(userRole.id);
+        });
+
         // Optional: Sort so directories come first
-        formattedItems.sort((a, b) => {
+        filteredItems.sort((a, b) => {
             if (a.isDirectory === b.isDirectory) {
                 return a.name.localeCompare(b.name);
             }
@@ -70,7 +147,7 @@ exports.listFiles = async (req, res) => {
 
         res.status(200).json({
             status: 'success',
-            data: formattedItems
+            data: filteredItems
         });
     } catch (error) {
         console.error('Error listing files:', error);
@@ -81,20 +158,31 @@ exports.listFiles = async (req, res) => {
 exports.createFolder = async (req, res) => {
     try {
         const { id } = req.params;
-        const { path: folderPath, name } = req.body;
+        const { path: folderPath, name, allowed_role_ids } = req.body;
 
         if (!name) return res.status(400).json({ error: 'Folder name is required' });
+
+        // Fix potential encoding issues from body-parser/client
+        const sanitizedName = Buffer.from(name, 'latin1').toString('utf8');
 
         const { projectDir, targetPath } = getSecurePath(id, folderPath);
         ensureProjectDir(projectDir);
 
-        const newFolderPath = path.join(targetPath, name);
+        const newFolderPath = path.join(targetPath, sanitizedName);
 
         if (fs.existsSync(newFolderPath)) {
             return res.status(400).json({ error: 'Folder already exists' });
         }
 
         fs.mkdirSync(newFolderPath, { recursive: true });
+
+        // Save metadata to DB
+        await ProjectFolder.create({
+            project_id: id,
+            name: sanitizedName,
+            path: folderPath || '',
+            allowed_role_ids: allowed_role_ids || null
+        });
 
         res.status(201).json({
             status: 'success',
@@ -128,8 +216,8 @@ exports.uploadFiles = async (req, res) => {
         const uploadedFiles = [];
 
         req.files.forEach(file => {
-            // Check for duplicate names and append timestamp if needed
-            let fileName = file.originalname;
+            // Fix encoding: multer/busboy misinterprets UTF-8 as Latin-1
+            let fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
             let finalPath = path.join(targetPath, fileName);
 
             if (fs.existsSync(finalPath)) {
@@ -210,6 +298,15 @@ exports.downloadFile = async (req, res) => {
         const { targetPath } = getSecurePath(id, itemPath);
 
         if (!fs.existsSync(targetPath)) {
+            // Smart fallback for garbled names
+            const dir = path.dirname(targetPath);
+            const base = path.basename(targetPath);
+            const garbledBase = Buffer.from(base, 'utf8').toString('latin1');
+            const garbledPath = path.join(dir, garbledBase);
+
+            if (fs.existsSync(garbledPath)) {
+                return res.download(garbledPath);
+            }
             return res.status(404).json({ error: 'File not found' });
         }
 
@@ -222,5 +319,62 @@ exports.downloadFile = async (req, res) => {
     } catch (error) {
         console.error('Error downloading file:', error);
         res.status(400).json({ error: error.message || 'Server error downloading file' });
+    }
+};
+
+exports.updatePermissions = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { path: folderPath, name, allowed_role_ids } = req.body;
+        const userRole = req.user.role;
+
+        // Restriction: Only Admin, Büro, and Projektleiter can change permissions
+        const allowedToManage = ['Admin', 'Büro', 'Projektleiter'].includes(userRole.name);
+        if (!allowedToManage) {
+            return res.status(403).json({ error: 'Access denied: Insufficient permissions' });
+        }
+
+        const [folder, created] = await ProjectFolder.findOrCreate({
+            where: { project_id: id, path: folderPath || '', name: name },
+            defaults: { allowed_role_ids }
+        });
+
+        if (!created) {
+            folder.allowed_role_ids = allowed_role_ids;
+            await folder.save();
+        }
+
+        res.status(200).json({ status: 'success', message: 'Permissions updated' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+exports.togglePublicShare = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { path: folderPath, name } = req.body;
+        const userRole = req.user.role;
+
+        // Restriction: Only Admin, Büro, and Projektleiter can manage links
+        const allowedToManage = ['Admin', 'Büro', 'Projektleiter'].includes(userRole.name);
+        if (!allowedToManage) {
+            return res.status(403).json({ error: 'Access denied: Insufficient permissions' });
+        }
+
+        const [folder] = await ProjectFolder.findOrCreate({
+            where: { project_id: id, path: folderPath || '', name: name }
+        });
+
+        folder.is_public = !folder.is_public;
+        await folder.save();
+
+        res.status(200).json({ 
+            status: 'success', 
+            is_public: folder.is_public,
+            share_token: folder.share_token
+        });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
 };

@@ -15,10 +15,11 @@ app.set('trust proxy', 1);
 
 // Middlewares
 app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "img-src": ["'self'", "data:", "https://ui-avatars.com", "https://*.empire-premium.de", "https://*.empire-premium-bau.de", "https://*.railway.app"],
+      "img-src": ["'self'", "data:", "http://localhost:3001", "http://localhost:3000", "https://ui-avatars.com", "https://*.empire-premium.de", "https://*.empire-premium-bau.de", "https://*.railway.app"],
       "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
       "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"]
     }
@@ -67,9 +68,12 @@ app.get('/api/v1/health', async (req, res) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use('/uploads/emails', express.static(path.join(__dirname, '../uploads/emails')));
+
+// Serve static files from the project root 'uploads' directory with cross-origin permission
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+}, express.static(path.join(__dirname, '../../uploads')));
 
 // Request Logging Middleware
 app.use((req, res, next) => {
@@ -109,11 +113,15 @@ try {
     const projectRoutes = require('./infrastructure/routes/projectRoutes');
     const supportRoutes = require('./infrastructure/routes/supportRoutes');
     const emailRoutes = require('./infrastructure/routes/emailRoutes');
+    const publicRoutes = require('./infrastructure/routes/publicRoutes');
 
     // --- PUBLIC WEBHOOKS ---
     // CRM Integrations (e.g. MyGo) - Uses simple multer for attachments
     const upload = require('multer')();
     app.post('/api/v1/integrations/mygo', upload.any(), require('./infrastructure/controllers/IntegrationController').handleMyGoWebhook);
+    
+    // Public Shared Folder Routes (NO AUTH)
+    app.use('/api/v1/public', publicRoutes);
     // -----------------------
 
     app.use('/api/v1/auth', authRoutes);
@@ -121,6 +129,7 @@ try {
     app.use('/api/v1/roles', roleRoutes);
     app.use('/api/v1/notes', noteRoutes);
     app.use('/api/v1/tasks', taskRoutes);
+    app.use('/api/v1/attachments', require('./infrastructure/routes/attachmentRoutes'));
     app.use('/api/v1/subcontractors', subcontractorRoutes);
     app.use('/api/v1/clients', clientRoutes);
     app.use('/api/v1/categories', categoryRoutes);
@@ -274,9 +283,11 @@ if (require.main === module) {
                     }
 
                     const [emailIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'email_id'");
-                    if (emailIdResults.length > 0 && emailIdResults[0].Null === 'NO') {
+                    if (emailIdResults.length === 0) {
+                        console.log('Adding missing email_id column to attachments...');
+                        await sequelize.query("ALTER TABLE attachments ADD COLUMN email_id CHAR(36) NULL AFTER inquiry_id");
+                    } else if (emailIdResults[0].Null === 'NO') {
                         console.log('Making email_id nullable in attachments...');
-                        // In MySQL we use MODIFY COLUMN to change nullability
                         await sequelize.query("ALTER TABLE attachments MODIFY COLUMN email_id CHAR(36) NULL");
                     }
 
@@ -299,6 +310,26 @@ if (require.main === module) {
                     if (apiKeyCategoryResults.length === 0) {
                         console.log('Adding missing allowed_category_ids column to api_keys...');
                         await sequelize.query("ALTER TABLE api_keys ADD COLUMN allowed_category_ids JSON NULL");
+                    }
+
+                    console.log('Verifying attachments schema for Notes and Tasks...');
+                    const [noteIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'note_id'");
+                    if (noteIdResults.length === 0) {
+                        console.log('Adding missing note_id column to attachments...');
+                        await sequelize.query("ALTER TABLE attachments ADD COLUMN note_id INT NULL AFTER inquiry_id");
+                    }
+
+                    const [taskIdResults] = await sequelize.query("SHOW COLUMNS FROM attachments LIKE 'task_id'");
+                    if (taskIdResults.length === 0) {
+                        console.log('Adding missing task_id column to attachments...');
+                        await sequelize.query("ALTER TABLE attachments ADD COLUMN task_id INT NULL AFTER note_id");
+                    }
+
+                    console.log('Verifying project_folders schema...');
+                    const [projectFolderResults] = await sequelize.query("SHOW TABLES LIKE 'project_folders'");
+                    if (projectFolderResults.length === 0) {
+                        console.log('Creating project_folders table...');
+                        await ProjectFolder.sync({ alter: true });
                     }
 
                     console.log('Schema verification complete.');

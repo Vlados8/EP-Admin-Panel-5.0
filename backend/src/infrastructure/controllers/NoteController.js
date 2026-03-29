@@ -1,4 +1,6 @@
-const { Note, User, Project } = require('../../domain/models');
+const { Note, User, Project, Attachment } = require('../../domain/models');
+const fs = require('fs');
+const path = require('path');
 const AppError = require('../../utils/appError');
 const { hasPermission } = require('../../utils/permissions');
 
@@ -20,6 +22,10 @@ exports.getNotes = async (req, res, next) => {
                     model: Project,
                     as: 'project',
                     attributes: ['id', 'project_number', 'title']
+                },
+                {
+                    model: Attachment,
+                    as: 'attachments'
                 }
             ],
             order: [['date', 'ASC'], ['createdAt', 'DESC']]
@@ -56,11 +62,25 @@ exports.createNote = async (req, res, next) => {
             user_id
         });
 
+        // Handle File Uploads
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                await Attachment.create({
+                    note_id: newNote.id,
+                    file_name: file.originalname,
+                    file_url: `/uploads/notizen/${file.filename}`,
+                    file_size: file.size,
+                    content_type: file.mimetype
+                });
+            }
+        }
+
         // Fetch back with user info and project info
         const noteWithUser = await Note.findByPk(newNote.id, {
             include: [
                 { model: User, as: 'user', attributes: ['id', 'name'] },
-                { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] }
+                { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] },
+                { model: Attachment, as: 'attachments' }
             ]
         });
 
@@ -76,14 +96,26 @@ exports.createNote = async (req, res, next) => {
 // Delete note
 exports.deleteNote = async (req, res, next) => {
     try {
-        const note = await Note.findByPk(req.params.id);
+        const note = await Note.findByPk(req.params.id, {
+            include: [{ model: Attachment, as: 'attachments' }]
+        });
 
         if (!note) {
             return next(new AppError('Notiz nicht gefunden', 404));
         }
 
         if (note.user_id !== req.user.id) {
-            return next(new AppError('Keine Berechtigung zum Löschen dieser Notiz', 403));
+            return next(new AppError('Keine Berechtigung zum Löschen этой заметки', 403));
+        }
+
+        // Delete File Attachments from disk
+        if (note.attachments && note.attachments.length > 0) {
+            note.attachments.forEach(att => {
+                const filePath = path.join(__dirname, '../../../../', att.file_url);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            });
         }
 
         await note.destroy();
@@ -121,10 +153,24 @@ exports.updateNote = async (req, res, next) => {
 
         await note.save();
 
+        // Handle New File Uploads in Update
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                await Attachment.create({
+                    note_id: note.id,
+                    file_name: file.originalname,
+                    file_url: `/uploads/notizen/${file.filename}`,
+                    file_size: file.size,
+                    content_type: file.mimetype
+                });
+            }
+        }
+
         const updatedNote = await Note.findByPk(note.id, {
             include: [
                 { model: User, as: 'user', attributes: ['id', 'name'] },
-                { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] }
+                { model: Project, as: 'project', attributes: ['id', 'project_number', 'title'] },
+                { model: Attachment, as: 'attachments' }
             ]
         });
 

@@ -281,7 +281,7 @@ exports.deleteEmailAccount = async (req, res, next) => {
                 for (const attr of email.attachments) {
                     try {
                         const relativePath = attr.file_url.startsWith('/') ? attr.file_url.substring(1) : attr.file_url;
-                        const filePath = path.join(__dirname, '../../..', relativePath);
+                        const filePath = path.join(__dirname, '../../../../', relativePath);
                         if (fs.existsSync(filePath)) {
                             fs.unlinkSync(filePath);
                         }

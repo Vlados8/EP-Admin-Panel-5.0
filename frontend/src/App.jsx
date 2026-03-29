@@ -18,6 +18,7 @@ import ApiIntegration from './pages/Settings/ApiIntegration';
 import Emails from './features/emails/Emails';
 import EmailMessages from './features/emails/EmailMessages';
 import EmailApi from './features/emails/EmailApi';
+import SharedFolderView from './features/shared/SharedFolderView';
 
 import { useEffect } from 'react';
 import socketService from './services/socket';
@@ -44,6 +45,7 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/shared/:token" element={<SharedFolderView />} />
 
                 <Route path="/" element={
                     <RequireAuth>

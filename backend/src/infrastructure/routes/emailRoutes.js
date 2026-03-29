@@ -9,7 +9,7 @@ const router = express.Router();
 const path = require('path');
 
 // Multer setup for email attachments
-const uploadDir = path.join(__dirname, '../../../uploads/emails');
+const uploadDir = path.join(__dirname, '../../../../uploads/emails');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }

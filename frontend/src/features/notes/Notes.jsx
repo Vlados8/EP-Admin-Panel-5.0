@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import usePermission from '../../hooks/usePermission';
+import MediaViewer from '../../components/common/MediaViewer';
 
 const Notes = () => {
     const { user: currentUser } = useSelector(state => state.auth);
@@ -21,12 +22,30 @@ const Notes = () => {
         color: 'blue',
         project_id: '',
     });
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [filePreviews, setFilePreviews] = useState([]);
+    const [editingNote, setEditingNote] = useState(null);
+
+    // Gallery State
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
+
+    const openGallery = (items, index) => {
+        setGalleryItems(items);
+        setGalleryIndex(index);
+        setIsGalleryOpen(true);
+    };
 
     // Everyone can manage their own notes as per backend logic
     const canManageNotes = usePermission('MANAGE_NOTES');
 
     const resetForm = () => {
         setFormData({ title: '', content: '', date: '', color: 'blue', project_id: '' });
+        setSelectedFiles([]);
+        filePreviews.forEach(p => URL.revokeObjectURL(p.url));
+        setFilePreviews([]);
+        setEditingNote(null);
     };
 
     const fetchData = async () => {
@@ -72,14 +91,89 @@ const Notes = () => {
         }
     };
 
+    const handleEditNote = (note) => {
+        setEditingNote(note);
+        setFormData({
+            title: note.title,
+            content: note.content,
+            date: note.date.split('T')[0],
+            color: note.color,
+            project_id: note.project_id || '',
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteAttachment = async (attachmentId) => {
+        if (!window.confirm('Anhang wirklich löschen?')) return;
+        try {
+            await api.delete(`/attachments/${attachmentId}`);
+            fetchData();
+            if (editingNote) {
+                setEditingNote({
+                    ...editingNote,
+                    attachments: editingNote.attachments.filter(a => a.id !== attachmentId)
+                });
+            }
+        } catch (error) {
+            console.error('Error deleting attachment:', error);
+            alert('Fehler beim Löschen des Anhangs');
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const newFiles = [...selectedFiles, ...files];
+        setSelectedFiles(newFiles);
+
+        const newPreviews = files.map(file => ({
+            name: file.name,
+            url: URL.createObjectURL(file),
+            type: file.type
+        }));
+        setFilePreviews([...filePreviews, ...newPreviews]);
+    };
+
+    const removeSelectedFile = (index) => {
+        const fileToRemove = filePreviews[index];
+        URL.revokeObjectURL(fileToRemove.url);
+        
+        const newFiles = [...selectedFiles];
+        newFiles.splice(index, 1);
+        setSelectedFiles(newFiles);
+
+        const newPreviews = [...filePreviews];
+        newPreviews.splice(index, 1);
+        setFilePreviews(newPreviews);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const payload = {
-                ...formData,
-                project_id: formData.project_id || null
-            };
-            await api.post('/notes', payload);
+            const data = new FormData();
+            data.append('title', formData.title);
+            data.append('content', formData.content);
+            data.append('date', formData.date);
+            data.append('color', formData.color);
+            if (formData.project_id) data.append('project_id', formData.project_id);
+
+            if (selectedFiles.length > 0) {
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    data.append('files', selectedFiles[i]);
+                }
+            }
+
+            if (editingNote) {
+                await api.patch(`/notes/${editingNote.id}`, data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                await api.post('/notes', data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            }
+
             fetchData();
             setIsModalOpen(false);
             resetForm();
@@ -219,6 +313,13 @@ const Notes = () => {
                                             </div>
                                             <div className="flex gap-2">
                                                 <button
+                                                    onClick={() => handleEditNote(note)}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                                    title="Notiz bearbeiten"
+                                                >
+                                                    <i className="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button
                                                     onClick={() => handleToggleDone(note)}
                                                     className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${note.isDone ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}`}
                                                     title={note.isDone ? "Als unerledigt markieren" : "Als erledigt markieren"}
@@ -235,7 +336,37 @@ const Notes = () => {
                                             </div>
                                         </div>
                                         <h4 className={`font-semibold mb-2 ${note.isDone ? 'line-through text-gray-400' : ''}`}>{note.title}</h4>
-                                        <p className={`text-sm ${note.isDone ? 'line-through text-gray-500' : 'text-gray-300'}`}>{note.content}</p>
+                                        <p className={`text-sm mb-3 ${note.isDone ? 'line-through text-gray-500' : 'text-gray-300'}`}>{note.content}</p>
+
+                                        {/* Attachments Display */}
+                                        {note.attachments && note.attachments.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Anhänge</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {note.attachments.map((att, index) => (
+                                                        <div 
+                                                            key={att.id} 
+                                                            onClick={() => openGallery(note.attachments, index)}
+                                                            className="group relative flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-2 pr-3 hover:bg-white/10 transition-all max-w-full cursor-pointer"
+                                                        >
+                                                            {att.content_type?.startsWith('image/') ? (
+                                                                <div className="w-8 h-8 rounded overflow-hidden bg-black/40 flex-shrink-0">
+                                                                    <img crossOrigin="anonymous" src={`${api.defaults.baseURL.replace('/api/v1', '')}${att.file_url}`} alt="" className="w-full h-full object-cover" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0">
+                                                                    <i className={`fa-solid ${att.content_type?.startsWith('video/') ? 'fa-video' : 'fa-file'}`}></i>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="text-xs text-gray-300 truncate max-w-[120px]" title={att.file_name}>{att.file_name}</span>
+                                                                <span className="text-[10px] text-gray-500">{(att.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                         )}
@@ -249,9 +380,9 @@ const Notes = () => {
                     <div className="glass-card w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-[slideUp_0.3s_ease-out]">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
                             <h2 className="text-xl font-semibold text-white flex items-center gap-3">
-                                <i className="fa-regular fa-note-sticky text-blue-400"></i> Neue Notiz
+                                <i className="fa-regular fa-note-sticky text-blue-400"></i> {editingNote ? 'Notiz bearbeiten' : 'Neue Notiz'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                            <button onClick={resetForm} className="text-gray-400 hover:text-white transition-colors">
                                 <i className="fa-solid fa-xmark"></i>
                             </button>
                         </div>
@@ -334,6 +465,77 @@ const Notes = () => {
                                 ></textarea>
                             </div>
 
+                            {/* Existing Files for Editing */}
+                            {editingNote && editingNote.attachments && editingNote.attachments.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-gray-400 pl-1">Aktuelle Anhänge</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {editingNote.attachments.map(att => (
+                                            <div key={att.id} className="flex items-center justify-between bg-black/20 border border-white/5 rounded-xl p-2.5">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <i className={`fa-solid ${att.content_type?.startsWith('image/') ? 'fa-image text-emerald-400' : att.content_type?.startsWith('video/') ? 'fa-video text-blue-400' : 'fa-file text-gray-400'}`}></i>
+                                                    <span className="text-xs text-gray-300 truncate">{att.file_name}</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteAttachment(att.id)}
+                                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                >
+                                                    <i className="fa-solid fa-trash-can text-xs"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* File Upload Input */}
+                            {/* File Upload Grid Preview */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-gray-400 pl-1">Anhänge (Bilder, Videos, Dokumente)</label>
+                                
+                                {filePreviews.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+                                        {filePreviews.map((preview, idx) => (
+                                            <div key={idx} className="relative group/preview aspect-video bg-black/40 rounded-xl overflow-hidden border border-white/10">
+                                                {preview.type.startsWith('image/') ? (
+                                                    <img crossOrigin="anonymous" src={preview.url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
+                                                        <i className={`fa-solid ${preview.type.startsWith('video/') ? 'fa-video text-blue-400' : 'fa-file text-gray-400'} text-xl`}></i>
+                                                        <span className="text-[10px] text-gray-400 truncate w-full text-center px-1">{preview.name}</span>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeSelectedFile(idx)}
+                                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-lg"
+                                                >
+                                                    <i className="fa-solid fa-xmark text-xs"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="relative group">
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        id="note-file-upload"
+                                    />
+                                    <label
+                                        htmlFor="note-file-upload"
+                                        className="w-full bg-black/20 border border-white/10 border-dashed rounded-xl py-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all"
+                                    >
+                                        <i className="fa-solid fa-cloud-arrow-up text-xl text-gray-500 group-hover:text-blue-400 transition-colors"></i>
+                                        <span className="text-xs text-gray-400">Dateien auswählen</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div className="pt-4 flex justify-end gap-3 border-t border-white/10">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
                                     Abbrechen
@@ -346,6 +548,13 @@ const Notes = () => {
                     </div>
                 </div>
             )}
+            {/* Media Gallery Viewer */}
+            <MediaViewer 
+                isOpen={isGalleryOpen}
+                onClose={() => setIsGalleryOpen(false)}
+                items={galleryItems}
+                initialIndex={galleryIndex}
+            />
         </div>
     );
 };

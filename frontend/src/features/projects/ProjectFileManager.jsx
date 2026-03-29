@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import MediaViewer from '../../components/common/MediaViewer';
+import FolderPermissionsModal from './components/FolderPermissionsModal';
 
 const ProjectFileManager = ({ project }) => {
     const projectId = project.id;
@@ -8,6 +11,42 @@ const ProjectFileManager = ({ project }) => {
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
+
+    // Auth & Permissions
+    const { user } = useSelector(state => state.auth);
+    const userRole = user?.role?.name || user?.role; // Fallback for safety
+    const canManagePermissions = ['Admin', 'Büro', 'Projektleiter'].includes(userRole);
+    const canManageFiles = ['Admin', 'Büro', 'Projektleiter'].includes(userRole); // Assuming same for now
+
+    // Gallery State
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
+    
+    // Permissions Modal State
+    const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+    const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState(null);
+
+    const openGallery = (allFiles, currentItemIdx) => {
+        // Filter only files (not directories) and map them to the format MediaViewer expects
+        const filesOnly = allFiles
+            .filter(item => !item.isDirectory)
+            .map(item => ({
+                id: item.name,
+                file_name: item.name,
+                file_url: item.url,
+                file_size: item.size,
+                content_type: isImage(item.name) ? 'image/jpeg' : (item.name.match(/\.(mp4|webm|mov)$/i) ? 'video/mp4' : 'application/octet-stream')
+            }));
+        
+        // Find the index of the current item in the filtered list
+        const currentItem = allFiles[currentItemIdx];
+        const newIdx = filesOnly.findIndex(f => f.file_name === currentItem.name);
+        
+        setGalleryItems(filesOnly);
+        setGalleryIndex(newIdx !== -1 ? newIdx : 0);
+        setIsGalleryOpen(true);
+    };
 
     const fetchFiles = async (path = currentPath) => {
         setLoading(true);
@@ -160,6 +199,16 @@ const ProjectFileManager = ({ project }) => {
         }
     };
 
+    const handleOpenPermissions = (item, e) => {
+        e.stopPropagation();
+        setSelectedFolderForPermissions({
+            name: item.name,
+            parentPath: currentPath,
+            permissions: item.permissions
+        });
+        setIsPermissionsModalOpen(true);
+    };
+
     return (
         <div className="glass-card rounded-2xl p-6 animate-[fadeIn_0.3s_ease-out]">
             {/* Toolbar */}
@@ -196,7 +245,7 @@ const ProjectFileManager = ({ project }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {!isStagesDir && (
+                    {!isStagesDir && canManageFiles && (
                         <>
                             <button
                                 onClick={handleCreateFolder}
@@ -261,13 +310,24 @@ const ProjectFileManager = ({ project }) => {
                             return (
                                 <div key={idx} className="group relative bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 rounded-xl p-3 flex flex-col items-center justify-between transition-all aspect-square text-center">
                                     {/* Delete Button - Appears on Hover */}
-                                    {canDelete && (
+                                    {canDelete && canManageFiles && (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleDelete(item.name, item.isDirectory); }}
                                             className="absolute top-2 right-2 w-6 h-6 rounded-md bg-red-500/80 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10 shadow-lg"
                                             title="Löschen"
                                         >
                                             <i className="fa-solid fa-trash"></i>
+                                        </button>
+                                    )}
+
+                                    {/* Permission/Share Button - For Folders */}
+                                    {item.isDirectory && !isStagesDir && canManagePermissions && (
+                                        <button
+                                            onClick={(e) => handleOpenPermissions(item, e)}
+                                            className="absolute top-2 left-2 w-6 h-6 rounded-md bg-blue-500/80 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-500 z-10 shadow-lg"
+                                            title="Berechtigungen & Teilen"
+                                        >
+                                            <i className="fa-solid fa-shield-halved"></i>
                                         </button>
                                     )}
 
@@ -285,14 +345,18 @@ const ProjectFileManager = ({ project }) => {
                                         >
                                             {isImage(item.name) ? (
                                                 <div
-                                                    onClick={() => window.open(`http://localhost:3000${item.url}`, '_blank')}
+                                                    onClick={() => openGallery(items, idx)}
                                                     className="w-20 h-20 mb-3 rounded-lg overflow-hidden border border-white/10 shadow-inner group-hover:border-blue-500/50 transition-colors cursor-pointer"
                                                 >
-                                                    <img src={`http://localhost:3000${item.url}`} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+                                                    <img crossOrigin="anonymous" src={`${api.defaults.baseURL.replace('/api/v1', '')}${item.url}`} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                                                 </div>
                                             ) : (
                                                 <i
-                                                    onClick={() => window.open(`http://localhost:3000${item.url}`, '_blank')}
+                                                    onClick={() => {
+                                                        const isVid = item.name.match(/\.(mp4|webm|mov)$/i);
+                                                        if (isVid) openGallery(items, idx);
+                                                        else window.open(`${api.defaults.baseURL.replace('/api/v1', '')}${item.url}`, '_blank');
+                                                    }}
                                                     className="fa-solid fa-file-lines text-5xl text-gray-400 mb-3 cursor-pointer hover:text-blue-400 transition-colors"
                                                 ></i>
                                             )}
@@ -315,6 +379,23 @@ const ProjectFileManager = ({ project }) => {
                     </div>
                 )}
             </div>
+            {/* Media Gallery Viewer */}
+            <MediaViewer 
+                isOpen={isGalleryOpen}
+                onClose={() => setIsGalleryOpen(false)}
+                items={galleryItems}
+                initialIndex={galleryIndex}
+            />
+            {/* Folder Permissions Modal */}
+            {selectedFolderForPermissions && (
+                <FolderPermissionsModal 
+                    isOpen={isPermissionsModalOpen}
+                    onClose={() => setIsPermissionsModalOpen(false)}
+                    folder={selectedFolderForPermissions}
+                    projectId={projectId}
+                    onUpdate={() => fetchFiles(currentPath)}
+                />
+            )}
         </div>
     );
 };
