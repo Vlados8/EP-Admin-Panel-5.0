@@ -327,7 +327,6 @@ const Users = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-gray-400">{user.company?.name}</div>
                                         </div>
                                     </td>
                                     <td className="p-4">
