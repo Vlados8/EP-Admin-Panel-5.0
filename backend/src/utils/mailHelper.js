@@ -126,6 +126,7 @@ const sendAutoReply = async (clientEmail, clientName, itemId, subject, type = 's
     const avatarLogoUrl = `${frontendUrl}/assets/Logo%20EP.png`;
 
     const greeting = clientName && clientName.trim() ? `Sehr geehrte(r) ${clientName},` : 'Sehr geehrte Damen und Herren,';
+    const paddedItemId = String(itemId).padStart(3, '0');
     
     let rawContent = '';
     let emailSubject = '';
@@ -134,7 +135,7 @@ const sendAutoReply = async (clientEmail, clientName, itemId, subject, type = 's
     if (type === 'support') {
         rawContent = `
             <p>${greeting}</p>
-            <p>Vielen Dank für Ihre Anfrage. Wir haben Ihr Ticket <strong>#SUP-${itemId}</strong> bezüglich "${subject}" erhalten.</p>
+            <p>Vielen Dank für Ihre Anfrage. Wir haben Ihr Ticket <strong>#SUP-${paddedItemId}</strong> bezüglich "${subject}" erhalten.</p>
             <p>Unser Support-Team wird Ihr Anliegen schnellstmöglich bearbeiten. Wir melden uns in Kürze bei Ihnen.</p>
             <p>Mit freundlichen Grüßen,</p>
             <p>Ihr Support-Team</p>
@@ -144,7 +145,7 @@ const sendAutoReply = async (clientEmail, clientName, itemId, subject, type = 's
     } else if (type === 'inquiry') {
         rawContent = `
             <p>${greeting}</p>
-            <p>Vielen Dank für Ihre Anfrage bezüglich "${subject}". Wir haben Ihre Daten erfolgreich erhalten (Anfragenummer: <strong>#INQ-${itemId}</strong>).</p>
+            <p>Vielen Dank für Ihre Anfrage bezüglich "${subject}". Wir haben Ihre Daten erfolgreich erhalten (Anfragenummer: <strong>#INQ-${paddedItemId}</strong>).</p>
             <p>Unser Team wird Ihre Anfrage umgehend prüfen und sich in Kürze mit Ihnen in Verbindung setzen.</p>
             <p>Mit freundlichen Grüßen,</p>
             <p>Empire Premium Bau</p>
