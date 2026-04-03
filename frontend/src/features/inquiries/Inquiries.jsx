@@ -185,7 +185,16 @@ const Inquiries = () => {
     const filteredInquiries = inquiries.filter(inq => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase();
-        return (inq.title?.toLowerCase().includes(q) || inq.contact_name?.toLowerCase().includes(q) || inq.category?.name?.toLowerCase().includes(q));
+        const formattedId = `inq-${String(inq.id).padStart(3, '0')}`;
+        const rawId = String(inq.id);
+        
+        return (
+            inq.title?.toLowerCase().includes(q) || 
+            inq.contact_name?.toLowerCase().includes(q) || 
+            inq.category?.name?.toLowerCase().includes(q) ||
+            formattedId.includes(q) ||
+            rawId.includes(q)
+        );
     });
 
     // Sub-components
@@ -198,6 +207,9 @@ const Inquiries = () => {
                 <div className="flex items-center gap-2">
                     <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 truncate max-w-[150px]">
                         {inquiry.category?.name || 'Allgemein'}
+                    </div>
+                    <div className="text-xs font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-gray-400">
+                        #INQ-{String(inquiry.id).padStart(3, '0')}
                     </div>
                     {!inquiry.is_read && (
                         <div className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white animate-pulse">
@@ -302,7 +314,10 @@ const Inquiries = () => {
                                                 {/* Column 1: Title & Details */}
                                                 <td className="p-4 align-top max-w-[300px]">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="font-semibold text-white text-base">{inq.title}</div>
+                                                        <span className="text-xs font-mono text-gray-500 bg-white/5 px-2 py-0.5 rounded border border-white/10 shrink-0">
+                                                            #INQ-{String(inq.id).padStart(3, '0')}
+                                                        </span>
+                                                        <div className="font-semibold text-white text-base truncate">{inq.title}</div>
                                                         {!inq.is_read && (
                                                             <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)] animate-pulse uppercase">
                                                                 Neu
