@@ -1,4 +1,5 @@
 const { Inquiry, InquiryAnswer, Category, Subcategory, Client, Company, Question, Project } = require('../../domain/models');
+const { sendAutoReply } = require('../../utils/mailHelper');
 const AppError = require('../../utils/appError');
 const { hasPermission } = require('../../utils/permissions');
 
@@ -135,6 +136,24 @@ exports.createInquiry = async (req, res, next) => {
             status: 'success',
             data: { inquiry: createdInquiry }
         });
+
+        // --- NEW: Auto-Responder Logic ---
+        if (createdInquiry.contact_email) {
+            const replyResult = await sendAutoReply(
+                createdInquiry.contact_email,
+                createdInquiry.contact_name,
+                createdInquiry.id,
+                createdInquiry.title,
+                'inquiry'
+            );
+
+            if (replyResult && replyResult.success) {
+                const noteAppend = "\n--------------------\n[" + new Date().toLocaleString('de-DE') + "] Automatische Empfangsbestätigung wurde an " + createdInquiry.contact_email + " versendet.";
+                const newNotes = createdInquiry.notes ? createdInquiry.notes + noteAppend : noteAppend.trim();
+                await createdInquiry.update({ notes: newNotes });
+            }
+        }
+
     } catch (err) {
         next(err);
     }

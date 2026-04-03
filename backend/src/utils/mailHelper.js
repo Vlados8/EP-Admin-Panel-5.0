@@ -109,9 +109,9 @@ const wrapInMonochromeTemplate = (content, subject, fromName = 'Empire Premium B
 };
 
 /**
- * Sends an automated confirmation email to a client when a ticket is created.
+ * Sends an automated confirmation email to a client when a ticket or inquiry is created.
  */
-const sendAutoReply = async (clientEmail, clientName, ticketId, subject) => {
+const sendAutoReply = async (clientEmail, clientName, itemId, subject, type = 'support') => {
     if (!mg || !process.env.MAILGUN_DOMAIN) {
         console.warn('[Mailgun] Auto-reply not sent. Mailgun not configured.');
         return null;
@@ -119,7 +119,7 @@ const sendAutoReply = async (clientEmail, clientName, ticketId, subject) => {
 
     const domain = process.env.MAILGUN_DOMAIN;
     const fromEmail = `no-reply@${domain}`;
-    const fromName = 'Empire Premium Support';
+    const fromName = 'Empire Premium Team';
     
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const headerLogoUrl = `${frontendUrl}/assets/Empire%20Premium%20white.png`;
@@ -127,21 +127,38 @@ const sendAutoReply = async (clientEmail, clientName, ticketId, subject) => {
 
     const greeting = clientName && clientName.trim() ? `Sehr geehrte(r) ${clientName},` : 'Sehr geehrte Damen und Herren,';
     
-    // Default reply template
-    const rawContent = `
-        <p>${greeting}</p>
-        <p>Vielen Dank für Ihre Anfrage. Wir haben Ihr Ticket <strong>#SUP-${ticketId}</strong> bezüglich "${subject}" erhalten.</p>
-        <p>Unser Support-Team wird Ihr Anliegen schnellstmöglich bearbeiten. Wir melden uns in Kürze bei Ihnen.</p>
-        <p>Mit freundlichen Grüßen,</p>
-        <p>Ihr Support-Team</p>
-    `;
+    let rawContent = '';
+    let emailSubject = '';
+    let templateSubject = '';
 
-    const finalHtml = wrapInMonochromeTemplate(rawContent, 'Ihre Support-Anfrage', fromName, headerLogoUrl, avatarLogoUrl);
+    if (type === 'support') {
+        rawContent = `
+            <p>${greeting}</p>
+            <p>Vielen Dank für Ihre Anfrage. Wir haben Ihr Ticket <strong>#SUP-${itemId}</strong> bezüglich "${subject}" erhalten.</p>
+            <p>Unser Support-Team wird Ihr Anliegen schnellstmöglich bearbeiten. Wir melden uns in Kürze bei Ihnen.</p>
+            <p>Mit freundlichen Grüßen,</p>
+            <p>Ihr Support-Team</p>
+        `;
+        emailSubject = `Ticket erhalten: ${subject}`;
+        templateSubject = 'Ihre Support-Anfrage';
+    } else if (type === 'inquiry') {
+        rawContent = `
+            <p>${greeting}</p>
+            <p>Vielen Dank für Ihre Anfrage bezüglich "${subject}". Wir haben Ihre Daten erfolgreich erhalten (Anfragenummer: <strong>#INQ-${itemId}</strong>).</p>
+            <p>Unser Team wird Ihre Anfrage umgehend prüfen und sich in Kürze mit Ihnen in Verbindung setzen.</p>
+            <p>Mit freundlichen Grüßen,</p>
+            <p>Empire Premium Bau</p>
+        `;
+        emailSubject = `Ihre Anfrage: ${subject}`;
+        templateSubject = 'Ihre Anfrage';
+    }
+
+    const finalHtml = wrapInMonochromeTemplate(rawContent, templateSubject, fromName, headerLogoUrl, avatarLogoUrl);
 
     const messageData = {
         from: `"${fromName}" <${fromEmail}>`,
         to: [clientEmail],
-        subject: `Ticket erhalten: ${subject}`,
+        subject: emailSubject,
         html: finalHtml
     };
 
