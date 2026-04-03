@@ -131,13 +131,14 @@ const Support = () => {
 
         // Search by ID, Subject, Client Name, Client Email, Client Phone, Project Title
         const matchId = ticket.id.toString().includes(query);
+        const matchFormattedId = `sup-${String(ticket.id).padStart(3, '0')}`.includes(query);
         const matchSubject = ticket.subject.toLowerCase().includes(query);
         const matchClientName = (ticket.client?.name || ticket.client_name) ? String(ticket.client?.name || ticket.client_name).toLowerCase().includes(query) : false;
         const matchClientEmail = (ticket.client?.email || ticket.client_email) ? String(ticket.client?.email || ticket.client_email).toLowerCase().includes(query) : false;
         const matchClientPhone = (ticket.client?.phone || ticket.client_phone) ? String(ticket.client?.phone || ticket.client_phone).toLowerCase().includes(query) : false;
         const matchProjectTitle = ticket.project?.title ? ticket.project.title.toLowerCase().includes(query) : false;
 
-        return matchId || matchSubject || matchClientName || matchClientEmail || matchClientPhone || matchProjectTitle;
+        return matchId || matchFormattedId || matchSubject || matchClientName || matchClientEmail || matchClientPhone || matchProjectTitle;
     });
 
     const getStatusColor = (status) => {
@@ -229,7 +230,7 @@ const Support = () => {
                                 >
                                     <div className="flex justify-between items-center mb-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-[10px] text-gray-400">#SUP-{ticket.id}</span>
+                                            <span className="font-bold text-[10px] text-gray-400">#SUP-{String(ticket.id).padStart(3, '0')}</span>
                                             {!ticket.is_read && (
                                                 <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(96,165,250,0.6)]"></div>
                                             )}
@@ -273,7 +274,7 @@ const Support = () => {
                                         {getPriorityBadge(ticketDetails.priority)}
                                     </div>
                                     <p className="text-sm text-gray-400 mb-1 lg:pl-8 flex items-center gap-2">
-                                        <span>Ticket #SUP-{ticketDetails.id} • Gemeldet von: {(ticketDetails.client?.name || ticketDetails.client_name) ? (ticketDetails.client?.name || ticketDetails.client_name) : 'Unbekannt'}</span>
+                                        <span>Ticket #SUP-{String(ticketDetails.id).padStart(3, '0')} • Gemeldet von: {(ticketDetails.client?.name || ticketDetails.client_name) ? (ticketDetails.client?.name || ticketDetails.client_name) : 'Unbekannt'}</span>
                                         {ticketDetails.source_website && (
                                             <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full text-[10px] border border-blue-500/20 flex items-center gap-1">
                                                 <i className="fa-solid fa-globe"></i> {ticketDetails.source_website}
