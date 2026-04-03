@@ -1,35 +1,43 @@
-# Railway Deployment Guide (SAFE)
+# Railway Deployment Guide: Empire Premium Bau
 
-This project is configured as a unified monorepo. The backend serves the compiled frontend. This guide focus on **SAFE** deployment to protect your existing data.
+This guide provides instructions for deploying and configuring the **Empire Premium Bau** CRM on Railway.
 
-## 1. Safety Measures (Data protection)
-The system now includes a dedicated script: `backend/scripts/db_safe_sync.js`.
-This script uses `alter: true`, which **guarantees** that:
-- Tables `support_tickets`, `inquiries`, `categories`, and `api_keys` **will NOT be deleted or overwritten**.
-- All existing data remains intact.
-- New tables `email_accounts`, `emails`, and `attachments` will be created automatically.
+## 1. Linked Repository
+Ensure your Railway project is linked to the following GitHub repository:
+`https://github.com/Vlados8/EP-Admin-Panel-5.0.git`
 
-## 2. Deployment Prompt (Copy & Paste)
-Use this prompt for your Railway deployment assistant (or follow these steps manually):
+## 2. Environment Variables
+You must set the following variables in the Railway dashboard (**Settings > Variables**):
 
-> [!IMPORTANT]
-> **Safe Deployment Prompt:**
-> Perform a safe deployment of the EP-Admin-Panel to Railway:
-> 1. **Environment Check**: Ensure `DATABASE_URL` (for MySQL) and `REDIS_URL` are correctly set in Railway variables.
-> 2. **Safe Migration**: Run `node backend/scripts/db_safe_sync.js` to initialize the new E-Mail database schema WITHOUT affecting existing Support, Inquiry, or Category data.
-> 3. **Build**: Run `npm run build` from the root to compile the frontend and install all backend dependencies.
-> 4. **Start**: Ensure the start command is `npm start` (which runs `node src/app.js` in the backend).
+| Variable | Description | Source |
+| :--- | :--- | :--- |
+| `NODE_ENV` | Set to `production` | Manual |
+| `DATABASE_URL` | MySQL Connection URL | Provided by Railway MySQL Service |
+| `JWT_SECRET` | Strong random string for auth tokens | Manual |
+| `PORT` | 3000 (default) | Automatic (Railway) |
+| `MAILGUN_API_KEY` | For email functionality | Mailgun Dashboard |
+| `MAILGUN_DOMAIN` | For email functionality | Mailgun Dashboard |
+| `SESSION_SECRET` | Strong random string | Manual |
 
-## 3. Environment Variables (Reminder)
-| Variable | Value/Description |
-| :--- | :--- |
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Use reference to MySQL service (e.g., `${{MySQL.MYSQL_URL}}`) |
-| `FRONTEND_URL` | Your production URL (e.g., `https://admin.empire-premium.de`) |
-| `MAILGUN_API_KEY` | Your Mailgun API Key |
-| `MAILGUN_DOMAIN` | `mail.empire-premium.de` |
+## 3. Persistent Volumes (CRITICAL)
+The application stores user-uploaded files in the `uploads/` directory. By default, Railway's filesystem is ephemeral. To prevent data loss:
+1. Go to your service **Settings > Volumes**.
+2. Click **Add Volume**.
+3. Set the **Mount Path** to: `/app/uploads`
+4. Click **Create Volume**.
 
-## 4. Troubleshooting
-- **Build fails**: Ensure `npm` versions are compatible.
-- **Database error**: Verify `DATABASE_URL`.
-- **Logos missing**: Ensure `FRONTEND_URL` is correct in `.env`.
+## 4. Build & Start Configuration
+The project is already configured via `railway.json`. The root `package.json` contains the orchestration scripts:
+- **Build Command**: `npm run build` (Installs all dependencies and builds the React frontend).
+- **Start Command**: `npm start` (Runs the Node.js backend which serves the built frontend).
+- **Healthcheck**: `/api/v1/health` (Automatically monitored by Railway).
+
+## 5. First-Time Setup
+On the first deployment, the backend will automatically:
+1. Synchronize the database schema with the models.
+2. Run any necessary schema fixes (e.g., adding missing columns).
+3. Seed the initial data if the database is empty.
+
+---
+> [!TIP]
+> Use the **Railway CLI** (`railway logs`) to monitor the initial bootstrap and database synchronization status.

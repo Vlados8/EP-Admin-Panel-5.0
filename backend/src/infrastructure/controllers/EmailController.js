@@ -766,11 +766,28 @@ exports.markAsRead = async (req, res, next) => {
 exports.deleteMessage = async (req, res, next) => {
     try {
         const message = await Email.findOne({
-            where: { id: req.params.id, company_id: req.user.company_id }
+            where: { id: req.params.id, company_id: req.user.company_id },
+            include: [{ model: Attachment, as: 'attachments' }]
         });
 
         if (!message) {
             return next(new AppError('E-Mail nicht gefunden.', 404));
+        }
+
+        // Cleanup physical files and Attachment records
+        if (message.attachments && message.attachments.length > 0) {
+            for (const attr of message.attachments) {
+                try {
+                    const relativePath = attr.file_url.startsWith('/') ? attr.file_url.substring(1) : attr.file_url;
+                    const filePath = path.join(__dirname, '../../../../', relativePath);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                    await attr.destroy();
+                } catch (fsErr) {
+                    console.error('[Message Delete] Attachment cleanup error:', fsErr);
+                }
+            }
         }
 
         await message.destroy(); // soft delete because paranoid: true

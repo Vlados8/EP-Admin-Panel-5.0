@@ -1,4 +1,5 @@
-const { SupportTicket, SupportResponse, Client, Project, User } = require('../../domain/models');
+const { SupportTicket, SupportResponse, Client, Project, User, Company } = require('../../domain/models');
+const { sendAutoReply } = require('../../utils/mailHelper');
 
 exports.getTickets = async (req, res, next) => {
     try {
@@ -99,6 +100,27 @@ exports.createTicket = async (req, res, next) => {
             status: 'success',
             data: { ticket: newTicket }
         });
+
+        // --- NEW: Auto-Responder Logic ---
+        if (newTicket.client_email) {
+            const replyResult = await sendAutoReply(
+                newTicket.client_email,
+                newTicket.client_name,
+                newTicket.id,
+                newTicket.subject
+            );
+
+            if (replyResult && replyResult.success) {
+                // Log the automated email in the ticket responses so staff can see it was sent
+                await SupportResponse.create({
+                    ticket_id: newTicket.id,
+                    user_id: req.user ? req.user.id : null, // System / unauthenticated
+                    message: "Automatische Empfangsbestätigung wurde versendet:\n\n" + replyResult.message.replace(/<[^>]+>/g, ''), // Strip HTML for the local note
+                    response_type: 'email'
+                });
+            }
+        }
+
     } catch (err) {
         next(err);
     }

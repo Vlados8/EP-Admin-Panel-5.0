@@ -90,7 +90,11 @@ const EmailMessages = () => {
 
         try {
             setSending(true);
-            await api.post('/emails/send', formData);
+            await api.post('/emails/send', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             toast.success('E-Mail erfolgreich gesendet!');
             setView('inbox');
             setAttachments([]);
@@ -285,9 +289,24 @@ const EmailMessages = () => {
                         </p>
                     </div>
                 </div>
-                <div className="text-gray-300 space-y-4 leading-relaxed whitespace-pre-wrap border-t border-white/10 pt-8 mb-8">
-                    {selectedMessage.body_plain || 'Kein Textinhalt verfügbar.'}
-                </div>
+                {selectedMessage.body_html ? (
+                    <div className="w-full mt-8 mb-8 rounded-xl overflow-auto bg-white p-6 border border-gray-200">
+                        <div 
+                            key={selectedMessage.id}
+                            className="email-html-content text-black"
+                            style={{ 
+                                color: '#000', 
+                                backgroundColor: '#fff',
+                                fontFamily: 'sans-serif'
+                            }}
+                            dangerouslySetInnerHTML={{ __html: selectedMessage.body_html }} 
+                        />
+                    </div>
+                ) : (
+                    <div className="text-gray-300 space-y-4 leading-relaxed whitespace-pre-wrap border-t border-white/10 pt-8 mb-8">
+                        {selectedMessage.body_plain || 'Kein Textinhalt verfügbar.'}
+                    </div>
+                )}
 
                 {selectedMessage.attachments && selectedMessage.attachments.length > 0 && (
                     <div className="border-t border-white/10 pt-6">
