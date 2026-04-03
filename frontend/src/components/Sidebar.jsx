@@ -145,12 +145,12 @@ const Sidebar = ({ isOpen, onClose, currentPath }) => {
         <>
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.2)] shrink-0">
-                        <i className="fa-solid fa-crown text-amber-400 text-xl"></i>
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
+                        <img src="/assets/Logo EP white.png" alt="Empire Premium Bau Logo" className="w-full h-full object-contain p-1" />
                     </div>
                     <div className="flex flex-col">
                         <h1 className="text-lg font-bold tracking-widest uppercase text-white leading-tight">Empire</h1>
-                        <span className="text-[10px] text-amber-400 tracking-widest uppercase font-semibold">Premium Bau</span>
+                        <span className="text-[10px] text-blue-400 tracking-widest uppercase font-semibold">Premium Bau</span>
                     </div>
                 </div>
                 <button onClick={onClose} className="md:hidden text-gray-500 hover:text-white p-2">

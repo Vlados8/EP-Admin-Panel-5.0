@@ -31,8 +31,8 @@ const Login = () => {
         <div className="h-screen w-screen flex items-center justify-center p-4">
             <div className="glass-panel w-full max-w-md p-8 rounded-3xl animate-[fadeIn_0.5s_ease-out_forwards]">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-600/20 flex items-center justify-center border border-blue-500/30 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-                        <span className="text-blue-400 font-black text-xl">EP</span>
+                    <div className="w-20 h-20 mx-auto rounded-3xl bg-white/5 flex items-center justify-center border border-white/10 mb-4 shadow-[0_0_40px_rgba(255,255,255,0.05)] overflow-hidden p-2">
+                        <img src="/assets/Logo EP white.png" alt="Empire Premium Bau Logo" className="w-full h-full object-contain" />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tighter text-white"> Empire Premium <span className="text-blue-400">Bau</span></h1>
                     <p className="text-slate-400 mt-2 font-medium">Internes Bau-Management System</p>
